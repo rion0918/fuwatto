@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>ふわっと。 Google Play 紹介画像</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+      }
+      body {
+        font-family: 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+        color: #283453;
+        background: #f5f2ff;
+      }
+      .frame {
+        width: 1080px;
+        height: 1920px;
+        position: relative;
+        overflow: hidden;
+        background:
+          radial-gradient(ellipse at 92% 74%, #dceeff 0, transparent 48%),
+          radial-gradient(ellipse at 5% 8%, #f9eefa 0, transparent 50%), #f5f2ff;
+      }
+      .brand {
+        position: absolute;
+        left: 80px;
+        top: 58px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        font-size: 31px;
+        font-weight: 800;
+        letter-spacing: 0.03em;
+      }
+      .brand img {
+        width: 64px;
+        height: 64px;
+        border-radius: 17px;
+      }
+      .eyebrow {
+        position: absolute;
+        right: 80px;
+        top: 80px;
+        color: #7b6d9b;
+        font-size: 21px;
+        font-weight: 600;
+        letter-spacing: 0.15em;
+      }
+      h1 {
+        position: absolute;
+        left: 80px;
+        top: 163px;
+        margin: 0;
+        font-size: 88px;
+        line-height: 1.27;
+        letter-spacing: -0.055em;
+        font-weight: 800;
+      }
+      h1 em {
+        color: #7756cd;
+        font-style: normal;
+      }
+      .sub {
+        position: absolute;
+        left: 84px;
+        top: 405px;
+        margin: 0;
+        font-size: 31px;
+        line-height: 1.7;
+        color: #697795;
+        font-weight: 600;
+        letter-spacing: 0.015em;
+      }
+      .crop {
+        position: absolute;
+        overflow: hidden;
+        background: #f5f2ff;
+        box-shadow: 0 24px 70px #5c4f8d18;
+        border: 2px solid #ffffffd9;
+        border-radius: 36px;
+      }
+      .crop img {
+        position: absolute;
+        max-width: none;
+        display: block;
+      }
+      .orb {
+        position: absolute;
+        width: 460px;
+        height: 460px;
+        border-radius: 50%;
+        border: 2px solid #fff9;
+        background:
+          radial-gradient(circle at 29% 21%, #fff9, transparent 30%),
+          linear-gradient(145deg, #fce8f070, #d2eaff70);
+        box-shadow:
+          inset -12px -10px 40px #c9c7f344,
+          inset 10px 10px 30px #fff9;
+      }
+      .orb.a {
+        left: -230px;
+        top: 1130px;
+      }
+      .orb.b {
+        right: -240px;
+        top: 530px;
+        width: 600px;
+        height: 600px;
+      }
+      .footer {
+        position: absolute;
+        bottom: 45px;
+        left: 80px;
+        font-size: 20px;
+        letter-spacing: 0.08em;
+        color: #8b82a3;
+      }
+      .feature {
+        width: 1024px;
+        height: 500px;
+        background: #f5f3ff;
+      }
+      .feature .orb {
+        display: none;
+      }
+      .feature .brand {
+        top: 53px;
+        left: 64px;
+        font-size: 43px;
+        gap: 19px;
+      }
+      .feature .brand img {
+        width: 76px;
+        height: 76px;
+        border-radius: 21px;
+      }
+      .feature h1 {
+        top: 182px;
+        left: 64px;
+        font-size: 54px;
+        line-height: 1.4;
+      }
+      .feature .sub {
+        top: 368px;
+        left: 67px;
+        font-size: 22px;
+      }
+      .feature .orb {
+        left: 680px;
+        top: -100px;
+        width: 650px;
+        height: 650px;
+      }
+      .feature .crop {
+        box-shadow: none;
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+      }
+    </style>
+  </head>
+  <body>
+    <main id="art" class="frame">
+      <div class="orb a"></div>
+      <div class="orb b"></div>
+      <div class="brand"><img src="../../../../assets/app-icon.png" alt="" />ふわっと。</div>
+      <div class="eyebrow" id="label"></div>
+      <h1 id="headline">忘れる前に、<br /><em>ふわっと残す。</em></h1>
+      <p class="sub" id="sub"></p>
+    </main>
+    <script>
+      const key = new URLSearchParams(location.search).get('image') || '01';
+      const data = {
+        '01': {
+          label: 'REMINDER',
+          title: '忘れる前に、<br><em>ふわっと残す。</em>',
+          sub: '予定が、色とりどりの泡に。',
+          crops: [['home.png', 0, 150, 1080, 2210, 184, 464, 712]],
+        },
+        '02': {
+          label: 'QUICK ADD',
+          title: '思いついたら、<br><em>すぐ予定に。</em>',
+          sub: '日付と時刻は、タップで選択。',
+          crops: [['add.png', 0, 640, 1080, 1710, 90, 494, 900]],
+        },
+        '03': {
+          label: 'VOICE INPUT',
+          title: '傾けて、<br><em>話すだけ。</em>',
+          sub: '左右に傾けて開始。縦に戻して終了。',
+          crops: [['voice-intro.png', 57, 765, 966, 900, 70, 640, 940]],
+        },
+        '04': {
+          label: 'NOTIFICATIONS',
+          title: '前日にも、<br><em>予定の時間にも。</em>',
+          sub: '忘れたくないことを、お知らせ。',
+          crops: [
+            ['notification-settings.png', 52, 960, 976, 835, 60, 680, 960],
+            ['home.png', 52, 404, 976, 178, 100, 1630, 880],
+          ],
+        },
+        '05': {
+          label: 'ANDROID WIDGET',
+          title: 'ホーム画面で、<br><em>さっと確認。</em>',
+          sub: '次の予定を、アプリを開かずに。',
+          crops: [['widget.png', 67, 551, 946, 740, 60, 690, 960]],
+        },
+        feature: {
+          label: '',
+          title: '忘れる前に、<br><em>数秒だけ。</em>',
+          sub: '泡で見える、やさしいリマインダー。',
+          crops: [['home.png', 155, 880, 845, 1000, 615, 18, 390]],
+        },
+      };
+      const item = data[key] || data['01'];
+      const art = document.getElementById('art');
+      if (key === 'feature') art.classList.add('feature');
+      document.getElementById('label').textContent = item.label;
+      document.getElementById('headline').innerHTML = item.title;
+      document.getElementById('sub').textContent = item.sub;
+      for (const [name, x, y, w, h, left, top, width] of item.crops) {
+        const scale = width / w;
+        const box = document.createElement('div');
+        box.className = 'crop';
+        Object.assign(box.style, {
+          left: left + 'px',
+          top: top + 'px',
+          width: width + 'px',
+          height: h * scale + 'px',
+        });
+        if (key === '03' || key === '05') box.style.borderRadius = '74px';
+        const img = document.createElement('img');
+        img.src = 'raw/' + name;
+        Object.assign(img.style, {
+          width: 1080 * scale + 'px',
+          left: -x * scale + 'px',
+          top: -y * scale + 'px',
+        });
+        box.append(img);
+        art.append(box);
+      }
+    </script>
+  </body>
+</html>

@@ -31,15 +31,19 @@ test('CI uses the shared Node version and standard MVH verification gate', () =>
 });
 
 test('Codex post-write hook runs structured MVH feedback instead of background formatters', () => {
-  assert.deepEqual(hooksConfig.hooks, [
-    {
-      event: 'PostToolUse',
-      matcher: {
-        tool: 'apply_patch',
+  assert.deepEqual(hooksConfig.hooks, {
+    PostToolUse: [
+      {
+        matcher: '^apply_patch$',
+        hooks: [
+          {
+            type: 'command',
+            command: 'bash "$(git rev-parse --show-toplevel)/.codex/hooks/post_write_feedback.sh"',
+          },
+        ],
       },
-      command: 'bash .codex/hooks/post_write_feedback.sh',
-    },
-  ]);
+    ],
+  });
 });
 
 test('MVH protected-file guard covers harness configuration and rules', () => {

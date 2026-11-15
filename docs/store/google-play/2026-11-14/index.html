@@ -1,0 +1,891 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>ふわっと。 Google Play 紹介画像 (2026-11-14)</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        -webkit-font-smoothing: antialiased;
+        text-rendering: optimizeLegibility;
+      }
+      body {
+        font-family:
+          'Hiragino Sans',
+          'Hiragino Kaku Gothic ProN',
+          'YuGothic',
+          'Noto Sans JP',
+          -apple-system,
+          BlinkMacSystemFont,
+          sans-serif;
+        color: #24304e;
+        background: #f5f3ff;
+      }
+
+      /* ===== Base Canvas (1080 x 1920) ===== */
+      .frame {
+        width: 1080px;
+        height: 1920px;
+        position: relative;
+        overflow: hidden;
+        background:
+          radial-gradient(ellipse at 86% 18%, rgba(220, 236, 255, 0.85) 0%, transparent 48%),
+          radial-gradient(ellipse at 12% 34%, rgba(242, 232, 255, 0.78) 0%, transparent 50%),
+          linear-gradient(170deg, #f8faff 0%, #f1f5ff 52%, #f4f0ff 100%);
+      }
+
+      /* ===== Panorama Canvas (2160 x 1920 = Slide 01 + Slide 02) ===== */
+      .frame.panorama {
+        width: 2160px;
+        height: 1920px;
+        background:
+          radial-gradient(ellipse at 20% 16%, rgba(220, 236, 255, 0.88) 0%, transparent 38%),
+          radial-gradient(ellipse at 50% 58%, rgba(235, 226, 255, 0.82) 0%, transparent 42%),
+          radial-gradient(ellipse at 84% 24%, rgba(222, 245, 238, 0.72) 0%, transparent 38%),
+          linear-gradient(115deg, #f8faff 0%, #f1f5ff 46%, #f4f1ff 100%);
+      }
+
+      /* Soft soap-bubble motifs matching the app's floating bubbles */
+      .orb {
+        position: absolute;
+        border-radius: 50%;
+        pointer-events: none;
+        border: 2px solid rgba(255, 255, 255, 0.86);
+        background:
+          radial-gradient(
+            circle at 30% 24%,
+            rgba(255, 255, 255, 0.88) 0%,
+            rgba(255, 255, 255, 0.2) 32%,
+            transparent 60%
+          ),
+          linear-gradient(
+            145deg,
+            rgba(220, 235, 255, 0.46) 0%,
+            rgba(237, 229, 255, 0.42) 55%,
+            rgba(221, 247, 236, 0.36) 100%
+          );
+        box-shadow:
+          inset -14px -14px 34px rgba(146, 132, 220, 0.16),
+          inset 12px 12px 26px rgba(255, 255, 255, 0.88);
+      }
+      .orb.o1 {
+        width: 340px;
+        height: 340px;
+        right: -105px;
+        top: 410px;
+      }
+      .orb.o2 {
+        width: 240px;
+        height: 240px;
+        left: -80px;
+        top: 720px;
+      }
+      .orb.o3 {
+        display: none;
+      }
+      .orb.o4 {
+        width: 380px;
+        height: 380px;
+        left: -130px;
+        bottom: -120px;
+        opacity: 0.72;
+      }
+
+      /* Panorama bubbles across the 2160px spread */
+      .frame.panorama .orb.o1 {
+        width: 360px;
+        height: 360px;
+        left: 910px;
+        right: auto;
+        top: 390px;
+      }
+      .frame.panorama .orb.o2 {
+        width: 240px;
+        height: 240px;
+        left: -70px;
+        top: 820px;
+      }
+      .frame.panorama .orb.o3 {
+        display: block;
+        width: 290px;
+        height: 290px;
+        right: -85px;
+        top: 1180px;
+      }
+      .frame.panorama .orb.o4 {
+        width: 360px;
+        height: 360px;
+        left: 900px;
+        bottom: -120px;
+      }
+
+      /* ===== Editorial Header (Clean, No AI Emoji Capsules) ===== */
+      .header {
+        position: relative;
+        z-index: 10;
+        padding: 68px 80px 0 80px;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .frame.panorama .header-wrap {
+        position: relative;
+        z-index: 10;
+        display: grid;
+        grid-template-columns: 1080px 1080px;
+        width: 2160px;
+      }
+
+      .top-meta {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        min-height: 58px;
+        margin-bottom: 24px;
+      }
+
+      .brand-lockup {
+        display: inline-flex;
+        align-items: center;
+        gap: 15px;
+      }
+      .brand-lockup img {
+        width: 56px;
+        height: 56px;
+        border-radius: 15px;
+        box-shadow: 0 6px 16px rgba(36, 48, 78, 0.14);
+      }
+      .brand-lockup span {
+        font-size: 30px;
+        font-weight: 800;
+        color: #24304e;
+        letter-spacing: 0.02em;
+      }
+
+      .kicker {
+        font-size: 24px;
+        font-weight: 700;
+        color: #6750d8;
+        letter-spacing: 0.04em;
+      }
+
+      h1 {
+        margin: 0 0 18px 0;
+        font-size: 82px;
+        line-height: 1.24;
+        letter-spacing: -0.04em;
+        font-weight: 800;
+        color: #24304e;
+      }
+      h1 em {
+        font-style: normal;
+        color: #6750d8;
+      }
+
+      .sub {
+        margin: 0;
+        font-size: 31px;
+        line-height: 1.56;
+        font-weight: 600;
+        color: #5a6888;
+        letter-spacing: 0.01em;
+      }
+
+      /* ===== Realistic Google Pixel Hardware Frame (Polished Aluminum & Actua Bezel) ===== */
+      .stage {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 5;
+        pointer-events: none;
+      }
+
+      .phone {
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+        border-radius: 88px;
+        padding: 7px;
+        background: linear-gradient(
+          135deg,
+          #f7f5f0 0%,
+          #dcd9d0 28%,
+          #b8b5ad 52%,
+          #e8e5dc 78%,
+          #cbc8bf 100%
+        );
+        box-shadow:
+          0 44px 100px rgba(32, 38, 70, 0.26),
+          0 14px 34px rgba(32, 38, 70, 0.14),
+          inset 0 2px 2px rgba(255, 255, 255, 0.95),
+          inset 0 -2px 3px rgba(90, 88, 82, 0.45),
+          0 0 0 1.5px rgba(155, 150, 140, 0.55);
+      }
+
+      /* Pixel right-side physical buttons: Power button on top, Volume rocker below */
+      .phone::before {
+        content: '';
+        position: absolute;
+        right: -5px;
+        top: 280px;
+        width: 5px;
+        height: 82px;
+        border-radius: 0 4px 4px 0;
+        background: linear-gradient(180deg, #eceae2 0%, #b8b4ab 50%, #dfdcd3 100%);
+        box-shadow:
+          -1px 0 1px rgba(0, 0, 0, 0.18),
+          0 128px 0 0 #d5d2c9,
+          0 188px 0 0 #c4c1b8;
+      }
+
+      /* Subtle Pixel top antenna bands */
+      .phone::after {
+        content: '';
+        position: absolute;
+        left: 98px;
+        right: 98px;
+        top: 0;
+        height: 7px;
+        background: linear-gradient(
+          90deg,
+          rgba(120, 116, 108, 0.5) 0px,
+          rgba(120, 116, 108, 0.5) 5px,
+          transparent 5px,
+          transparent calc(100% - 5px),
+          rgba(120, 116, 108, 0.5) calc(100% - 5px),
+          rgba(120, 116, 108, 0.5) 100%
+        );
+        pointer-events: none;
+      }
+
+      .pixel-bezel {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        border-radius: 81px;
+        padding: 15px;
+        background: linear-gradient(160deg, #1b1d24 0%, #0d0f14 55%, #161820 100%);
+        box-shadow:
+          inset 0 0 0 1.5px rgba(255, 255, 255, 0.14),
+          0 0 0 1px rgba(0, 0, 0, 0.65);
+      }
+
+      .pixel-earpiece {
+        position: absolute;
+        top: 6px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 104px;
+        height: 4px;
+        border-radius: 999px;
+        background: #050608;
+        box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.18);
+        z-index: 30;
+      }
+
+      .phone-screen {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        border-radius: 66px;
+        overflow: hidden;
+        background: #f7f5ff;
+        box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.1);
+      }
+
+      .camera-hole {
+        position: absolute;
+        top: 24px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: radial-gradient(circle at 36% 34%, #38497a 0%, #171e33 32%, #07090e 72%);
+        box-shadow:
+          0 0 0 2px rgba(15, 17, 24, 0.92),
+          inset 0 1.5px 3px rgba(130, 170, 255, 0.35);
+        z-index: 28;
+      }
+
+      .pixel-statusbar {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 76px;
+        padding: 0 46px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-family: -apple-system, 'Roboto', sans-serif;
+        font-size: 22px;
+        font-weight: 700;
+        color: #24304e;
+        z-index: 26;
+      }
+      .pixel-status-icons {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .pixel-status-icons svg {
+        width: 21px;
+        height: 21px;
+        fill: #24304e;
+      }
+
+      .pixel-gesture-pill {
+        position: absolute;
+        bottom: 16px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 168px;
+        height: 7px;
+        border-radius: 999px;
+        background: rgba(36, 48, 78, 0.28);
+        z-index: 28;
+      }
+
+      .screen-crop {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+      }
+      .screen-crop img {
+        position: absolute;
+        max-width: none;
+        display: block;
+      }
+
+      /* Floating real-UI callout card (e.g. voice-intro modal card on Slide 02, upcoming bar on Slide 04) */
+      .floating-card {
+        position: absolute;
+        z-index: 20;
+        border-radius: 42px;
+        overflow: hidden;
+        background: #ffffff;
+        border: 3px solid rgba(255, 255, 255, 0.96);
+        box-shadow:
+          0 32px 72px rgba(32, 38, 70, 0.24),
+          0 8px 24px rgba(103, 80, 216, 0.12);
+      }
+      .floating-card img {
+        position: absolute;
+        max-width: none;
+        display: block;
+      }
+
+      /* Custom Android Home Mockup inside Phone for Slide 05 (Widget) */
+      .launcher-bg {
+        width: 100%;
+        height: 100%;
+        position: relative;
+        background:
+          radial-gradient(circle at 20% 18%, #d7e8ff 0%, transparent 50%),
+          radial-gradient(circle at 82% 28%, #f8dcf2 0%, transparent 52%),
+          linear-gradient(180deg, #dde7f9 0%, #ece6fb 56%, #d8e2f6 100%);
+      }
+      .launcher-clock {
+        position: absolute;
+        top: 94px;
+        left: 52px;
+        color: #24304e;
+      }
+      .launcher-clock .date {
+        font-size: 25px;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        opacity: 0.85;
+      }
+      .launcher-dock {
+        position: absolute;
+        left: 48px;
+        right: 48px;
+        height: 124px;
+        border-radius: 40px;
+        background: rgba(255, 255, 255, 0.62);
+        border: 1.5px solid rgba(255, 255, 255, 0.86);
+        display: flex;
+        align-items: center;
+        justify-content: space-around;
+        padding: 0 28px;
+      }
+      .dock-icon {
+        width: 76px;
+        height: 76px;
+        border-radius: 22px;
+        background: rgba(255, 255, 255, 0.92);
+        box-shadow: 0 8px 18px rgba(36, 48, 78, 0.08);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .dock-icon.fuwatto {
+        padding: 0;
+        overflow: hidden;
+      }
+      .dock-icon.fuwatto img {
+        width: 100%;
+        height: 100%;
+      }
+      .dock-dot {
+        width: 32px;
+        height: 32px;
+        border-radius: 10px;
+      }
+
+      /* ===== Feature Graphic (1024 x 500) ===== */
+      .frame.feature {
+        width: 1024px;
+        height: 500px;
+        background:
+          radial-gradient(ellipse at 82% 50%, rgba(220, 236, 255, 0.9) 0%, transparent 56%),
+          radial-gradient(ellipse at 16% 18%, rgba(242, 232, 255, 0.82) 0%, transparent 48%),
+          linear-gradient(135deg, #f8faff 0%, #f0f4ff 54%, #f3efff 100%);
+      }
+      .frame.feature .header {
+        padding: 46px 0 0 58px;
+        max-width: 560px;
+      }
+      .frame.feature .top-meta {
+        margin-bottom: 20px;
+        min-height: 50px;
+      }
+      .frame.feature .brand-lockup img {
+        width: 48px;
+        height: 48px;
+      }
+      .frame.feature .brand-lockup span {
+        font-size: 28px;
+      }
+      .frame.feature h1 {
+        font-size: 60px;
+        line-height: 1.24;
+        margin-bottom: 14px;
+      }
+      .frame.feature .sub {
+        font-size: 23px;
+        line-height: 1.5;
+      }
+      .frame.feature .orb.o1 {
+        width: 230px;
+        height: 230px;
+        right: 330px;
+        top: -80px;
+        opacity: 0.7;
+      }
+      .frame.feature .orb.o2 {
+        width: 180px;
+        height: 180px;
+        left: 440px;
+        top: 340px;
+        opacity: 0.75;
+      }
+      .frame.feature .orb.o4 {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <main id="art" class="frame">
+      <div class="orb o1"></div>
+      <div class="orb o2"></div>
+      <div class="orb o3"></div>
+      <div class="orb o4"></div>
+
+      <div id="header-root">
+        <header class="header">
+          <div class="top-meta">
+            <div class="brand-lockup">
+              <img src="../../../../assets/app-icon.png" alt="" />
+              <span>ふわっと。</span>
+            </div>
+          </div>
+          <h1 id="headline">忘れる前に、ふわっと残す。</h1>
+          <p class="sub" id="sub">予定やメモが、ひと目でわかる色とりどりの泡に。</p>
+        </header>
+      </div>
+
+      <div class="stage" id="stage"></div>
+    </main>
+
+    <script>
+      const key = new URLSearchParams(location.search).get('image') || 'panorama';
+
+      const panoSlideLeft = {
+        brand: true,
+        kicker: '数秒で残せるリマインダー',
+        title: '忘れる前に、<br><em>ふわっと残す。</em>',
+        sub: '予定やメモが、ひと目でわかる色とりどりの泡に。',
+      };
+
+      const panoSlideRight = {
+        brand: false,
+        kicker: 'かたむけ声メモ',
+        title: 'スマホを傾けて、<br><em>ひとこと声メモ。</em>',
+        sub: '左右に傾けて話すだけ。日時も自動で読み取ります。',
+      };
+
+      const singleSlides = {
+        '03': {
+          brand: false,
+          kicker: 'クイック追加',
+          title: '思いついたら、<br><em>すぐ予定に。</em>',
+          sub: '「今日・明日」「朝・昼・夜」もタップで選択。',
+          phone: {
+            top: 485,
+            width: 860,
+            height: 1540,
+            crop: ['add.png', 0, 560, 1080, 1800],
+          },
+        },
+        '04': {
+          brand: false,
+          kicker: '通知リマインド',
+          title: '前日にも、<br><em>予定の時間にも。</em>',
+          sub: '大切な予定を、ちょうどいいタイミングで2回お知らせ。',
+          phone: {
+            top: 485,
+            width: 850,
+            height: 1520,
+            crop: ['notification-settings.png', 0, 820, 1080, 1500],
+          },
+          floatingCard: {
+            src: 'home.png',
+            crop: [52, 404, 976, 178],
+            left: 90,
+            top: 1570,
+            width: 900,
+            radius: 34,
+          },
+        },
+        '05': {
+          brand: false,
+          kicker: 'ホーム画面ウィジェット',
+          title: 'アプリを開かず、<br><em>さっと確認。</em>',
+          sub: 'いつものホーム画面から、次の予定確認も追加も。',
+          widgetPhone: {
+            top: 485,
+            width: 850,
+            height: 1520,
+            // Stop cleanly at y=1420 (before button bottom corner radius starts at y=1421)
+            widgetCrop: ['widget.png', 67, 551, 945, 869],
+          },
+        },
+        feature: {
+          brand: true,
+          kicker: '',
+          title: '忘れる前に、<br><em>数秒だけ。</em>',
+          sub: 'かたむけ声メモと泡で、予定をやさしく管理。',
+          phone: {
+            left: 790,
+            top: 34,
+            width: 390,
+            height: 680,
+            tilt: -5.5,
+            crop: ['home.png', 0, 130, 1080, 1980],
+          },
+        },
+      };
+
+      const art = document.getElementById('art');
+      const stage = document.getElementById('stage');
+      const headerRoot = document.getElementById('header-root');
+
+      function createHeaderHTML(data) {
+        const leftPart = data.brand
+          ? `
+            <div class="brand-lockup">
+              <img src="../../../../assets/app-icon.png" alt="" />
+              <span>ふわっと。</span>
+            </div>
+          `
+          : `<div class="kicker">${data.kicker || ''}</div>`;
+        const rightPart =
+          data.brand && data.kicker ? `<div class="kicker">${data.kicker}</div>` : '';
+        return `
+          <header class="header">
+            <div class="top-meta">
+              ${leftPart}
+              ${rightPart}
+            </div>
+            <h1>${data.title}</h1>
+            <p class="sub">${data.sub}</p>
+          </header>
+        `;
+      }
+
+      function createPhoneElement(cfg, isCompact = false) {
+        const phone = document.createElement('div');
+        phone.className = 'phone';
+        const padOuter = isCompact ? 4 : 7;
+        const padInner = isCompact ? 9 : 15;
+        const totalPad = (padOuter + padInner) * 2;
+        const screenW = cfg.width - totalPad;
+        const screenH = cfg.height - totalPad;
+
+        phone.style.top = `${cfg.top}px`;
+        phone.style.width = `${cfg.width}px`;
+        phone.style.height = `${cfg.height}px`;
+        phone.style.padding = `${padOuter}px`;
+        if (isCompact) {
+          phone.style.borderRadius = '52px';
+        } else if (cfg.width >= 1000) {
+          phone.style.borderRadius = '104px';
+        }
+        if (cfg.left !== undefined) {
+          phone.style.left = `${cfg.left}px`;
+        }
+        if (cfg.tilt) {
+          phone.style.transform = `translateX(-50%) rotate(${cfg.tilt}deg)`;
+        }
+
+        const bezel = document.createElement('div');
+        bezel.className = 'pixel-bezel';
+        bezel.style.padding = `${padInner}px`;
+        if (isCompact) {
+          bezel.style.borderRadius = '48px';
+        } else if (cfg.width >= 1000) {
+          bezel.style.borderRadius = '96px';
+        }
+
+        const earpiece = document.createElement('div');
+        earpiece.className = 'pixel-earpiece';
+        if (isCompact) {
+          earpiece.style.width = '56px';
+          earpiece.style.height = '3px';
+          earpiece.style.top = '4px';
+        }
+        bezel.appendChild(earpiece);
+
+        const screen = document.createElement('div');
+        screen.className = 'phone-screen';
+        if (isCompact) {
+          screen.style.borderRadius = '39px';
+        } else if (cfg.width >= 1000) {
+          screen.style.borderRadius = '80px';
+        }
+
+        const cam = document.createElement('div');
+        cam.className = 'camera-hole';
+        if (isCompact) {
+          cam.style.width = '16px';
+          cam.style.height = '16px';
+          cam.style.top = '13px';
+        } else if (cfg.width >= 1000) {
+          cam.style.width = '34px';
+          cam.style.height = '34px';
+          cam.style.top = '28px';
+        }
+        screen.appendChild(cam);
+
+        const status = document.createElement('div');
+        status.className = 'pixel-statusbar';
+        if (isCompact) {
+          status.style.height = '44px';
+          status.style.padding = '0 26px';
+          status.style.fontSize = '13px';
+        } else if (cfg.width >= 1000) {
+          status.style.height = '90px';
+          status.style.padding = '0 58px';
+          status.style.fontSize = '26px';
+        }
+        status.innerHTML = `
+          <span>9:30</span>
+          <div class="pixel-status-icons" style="${isCompact ? 'gap:6px;' : ''}">
+            <svg style="${isCompact ? 'width:13px;height:13px;' : ''}" viewBox="0 0 24 24"><path d="M12 3C6.95 3 3.15 4.85 0 7.23L12 22L24 7.25C20.85 4.87 17.05 3 12 3Z"/></svg>
+            <svg style="${isCompact ? 'width:13px;height:13px;' : ''}" viewBox="0 0 24 24"><path d="M2 22h20V2z"/></svg>
+            <svg style="${isCompact ? 'width:13px;height:13px;' : ''}" viewBox="0 0 24 24"><path d="M15.67 4H14V2h-4v2H8.33C7.6 4 7 4.6 7 5.33v15.33C7 21.4 7.6 22 8.33 22h7.33c.74 0 1.34-.6 1.34-1.33V5.33C17 4.6 16.4 4 15.67 4z"/></svg>
+          </div>
+        `;
+        screen.appendChild(status);
+
+        const pill = document.createElement('div');
+        pill.className = 'pixel-gesture-pill';
+        if (isCompact) {
+          pill.style.width = '86px';
+          pill.style.height = '4px';
+          pill.style.bottom = '9px';
+        }
+        screen.appendChild(pill);
+
+        if (cfg.crop) {
+          const [name, x, y, w] = cfg.crop;
+          const scale = screenW / w;
+          const cropDiv = document.createElement('div');
+          cropDiv.className = 'screen-crop';
+          const img = document.createElement('img');
+          img.src = `../2026-10-17/raw/${name}`;
+          img.style.width = `${1080 * scale}px`;
+          img.style.left = `${-x * scale}px`;
+          img.style.top = `${-y * scale}px`;
+          cropDiv.appendChild(img);
+          screen.appendChild(cropDiv);
+        }
+
+        bezel.appendChild(screen);
+        phone.appendChild(bezel);
+        return { phone, screen, screenW, screenH };
+      }
+
+      function appendFloatingCard(fc) {
+        const [cx, cy, cw, ch] = fc.crop;
+        const scale = fc.width / cw;
+        const card = document.createElement('div');
+        card.className = 'floating-card';
+        card.style.left = `${fc.left}px`;
+        card.style.top = `${fc.top}px`;
+        card.style.width = `${fc.width}px`;
+        card.style.height = `${Math.round(ch * scale)}px`;
+        if (fc.radius) {
+          card.style.borderRadius = `${fc.radius}px`;
+        }
+        if (fc.rotate) {
+          card.style.transform = `rotate(${fc.rotate}deg)`;
+        }
+
+        const img = document.createElement('img');
+        img.src = `../2026-10-17/raw/${fc.src}`;
+        img.style.width = `${1080 * scale}px`;
+        img.style.left = `${-cx * scale}px`;
+        img.style.top = `${-cy * scale}px`;
+        card.appendChild(img);
+        stage.appendChild(card);
+      }
+
+      if (key === 'panorama') {
+        art.classList.add('panorama');
+        headerRoot.className = 'header-wrap';
+        headerRoot.innerHTML = `${createHeaderHTML(panoSlideLeft)}${createHeaderHTML(panoSlideRight)}`;
+
+        // ONE giant dynamic smartphone spanning across Slide 01 and Slide 02 (x=1080 seam)
+        const { phone: heroPhone } = createPhoneElement({
+          left: 1000,
+          top: 470,
+          width: 1040,
+          height: 1880,
+          tilt: -7.5,
+          crop: ['home.png', 0, 120, 1080, 2180],
+        });
+        stage.appendChild(heroPhone);
+
+        // Real 'かたむけ声メモ' modal card from voice-intro.png overlapping the lower-right of the giant phone on Slide 02
+        appendFloatingCard({
+          src: 'voice-intro.png',
+          crop: [57, 765, 966, 900],
+          left: 1275,
+          top: 960,
+          width: 810,
+          radius: 62,
+          rotate: 2.2,
+        });
+      } else {
+        const item = singleSlides[key] || singleSlides['03'];
+        if (key === 'feature') {
+          art.classList.add('feature');
+        }
+        headerRoot.innerHTML = createHeaderHTML(item);
+
+        if (item.phone) {
+          const { phone } = createPhoneElement(item.phone, key === 'feature');
+          stage.appendChild(phone);
+        }
+
+        if (item.widgetPhone) {
+          const cfg = item.widgetPhone;
+          const { phone, screen, screenW } = createPhoneElement(cfg);
+          const launcher = document.createElement('div');
+          launcher.className = 'launcher-bg';
+
+          const clock = document.createElement('div');
+          clock.className = 'launcher-clock';
+          clock.innerHTML = '<div class="date">11月14日（土）</div>';
+          launcher.appendChild(clock);
+
+          const [name, wx, wy, ww, wh] = cfg.widgetCrop;
+          const cardW = screenW - 72;
+          const scale = cardW / ww;
+          const imgH = Math.round(wh * scale);
+          const btnExtraH = Math.round(52 * scale); // Symmetric 54px vertical padding below '＋ 追加する'
+          const bottomCardPad = Math.round(48 * scale);
+          const cardH = imgH + btnExtraH + bottomCardPad;
+          const cardTop = 148;
+
+          const wCard = document.createElement('div');
+          wCard.style.position = 'absolute';
+          wCard.style.left = '36px';
+          wCard.style.top = `${cardTop}px`;
+          wCard.style.width = `${cardW}px`;
+          wCard.style.height = `${cardH}px`;
+          wCard.style.borderRadius = '38px';
+          wCard.style.overflow = 'hidden';
+          wCard.style.background = 'linear-gradient(90deg, #f6f3ff 0%, #f3efff 50%, #efebfe 100%)';
+          wCard.style.boxShadow = '0 22px 50px rgba(36, 48, 78, 0.18)';
+          wCard.style.border = '2px solid rgba(255, 255, 255, 0.94)';
+
+          const imgClip = document.createElement('div');
+          imgClip.style.position = 'absolute';
+          imgClip.style.left = '0';
+          imgClip.style.top = '0';
+          imgClip.style.width = `${cardW}px`;
+          imgClip.style.height = `${imgH}px`;
+          imgClip.style.overflow = 'hidden';
+
+          const wImg = document.createElement('img');
+          wImg.src = `../2026-10-17/raw/${name}`;
+          wImg.style.position = 'absolute';
+          wImg.style.maxWidth = 'none';
+          wImg.style.width = `${1080 * scale}px`;
+          wImg.style.left = `${-wx * scale}px`;
+          wImg.style.top = `${-wy * scale}px`;
+          imgClip.appendChild(wImg);
+          wCard.appendChild(imgClip);
+
+          // Seamless rounded bottom cap for the '＋ 追加する' button (x=117..967 in raw coords)
+          const btnCap = document.createElement('div');
+          btnCap.style.position = 'absolute';
+          btnCap.style.left = `${Math.round((117 - wx) * scale)}px`;
+          btnCap.style.top = `${imgH - 1}px`;
+          btnCap.style.width = `${Math.round(850 * scale)}px`;
+          btnCap.style.height = `${btnExtraH + 1}px`;
+          btnCap.style.borderRadius = '0 0 22px 22px';
+          btnCap.style.background = 'linear-gradient(180deg, #5a42c3 0%, #5038b8 100%)';
+          wCard.appendChild(btnCap);
+
+          launcher.appendChild(wCard);
+
+          const dock = document.createElement('div');
+          dock.className = 'launcher-dock';
+          dock.style.top = `${cardTop + cardH + 62}px`;
+          dock.innerHTML = `
+            <div class="dock-icon fuwatto"><img src="../../../../assets/app-icon.png" alt="" /></div>
+            <div class="dock-icon"><div class="dock-dot" style="background:#dcebff"></div></div>
+            <div class="dock-icon"><div class="dock-dot" style="background:#ede5ff"></div></div>
+            <div class="dock-icon"><div class="dock-dot" style="background:#ddf7ec"></div></div>
+          `;
+          launcher.appendChild(dock);
+
+          screen.appendChild(launcher);
+          stage.appendChild(phone);
+        }
+
+        if (item.floatingCard) {
+          appendFloatingCard(item.floatingCard);
+        }
+      }
+    </script>
+  </body>
+</html>
