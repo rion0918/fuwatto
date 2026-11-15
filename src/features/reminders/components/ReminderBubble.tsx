@@ -644,8 +644,9 @@ const styles = StyleSheet.create({
   time: {
     maxWidth: '100%',
     flexShrink: 1,
-    color: 'rgba(38,49,81,0.76)',
+    color: 'rgba(38,49,81,0.84)',
     textAlign: 'center',
     fontWeight: '500',
+    fontVariant: ['tabular-nums'],
   },
 });

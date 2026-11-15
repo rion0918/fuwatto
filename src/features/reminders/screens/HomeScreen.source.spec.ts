@@ -150,7 +150,6 @@ test('home presents the next reminder as a compact bubble card that opens its de
   );
 
   assertSourceIncludes(source, [
-    /const reminderDetailBubbles = require\(['"]\.\.\/\.\.\/\.\.\/\.\.\/assets\/reminder-detail-bubbles\.png['"]\);/,
     /const nextReminder = reminders\.find\(\(reminder\) => !reminder\.allDay\) \?\? null;/,
     /const nextReminderLabel = nextReminder[\s\S]*formatReminderBubbleDateTime\(nextReminder\.targetAt,/,
     /const nextReminderAccessibilityLabel = nextReminder[\s\S]*formatReminderDetailAccessibilityDateTime\(nextReminder\.targetAt,/,
@@ -164,23 +163,21 @@ test('home presents the next reminder as a compact bubble card that opens its de
       /onPress=\{\(\) => setSelectedReminderId\(nextReminder\.id\)\}/,
       /styles\.nextReminderCard/,
       /styles\.nextReminderCardPressed/,
-      /<ImageBackground/,
-      /source=\{reminderDetailBubbles\}/,
-      /resizeMode="cover"/,
+      /styles\.nextReminderBody/,
       /name="notifications-outline"/,
       /nextReminderIsExpired \? '期限済み' : '次のリマインド'/,
       /numberOfLines=\{1\}[\s\S]*ellipsizeMode="tail"[\s\S]*\{nextReminder\.title\}/,
       /numberOfLines=\{1\}[\s\S]*\{nextReminderLabel\}/,
     ],
-    excludes: [/完璧！/, /忘れたくないことはありません/, /name="time-outline"/],
+    excludes: [/完璧！/, /忘れたくないことはありません/, /name="time-outline"/, /<ImageBackground/],
   });
   assertSourceIncludes(nextReminderStyles, [
-    /nextReminderCard: \{[\s\S]*minHeight: 68,[\s\S]*borderRadius: 24,[\s\S]*borderWidth: 1/,
+    /nextReminderCard: \{[\s\S]*minHeight: 68,[\s\S]*borderRadius: 24,[\s\S]*borderWidth: 1,[\s\S]*borderColor: palette\.line,[\s\S]*backgroundColor: palette\.white/,
     /nextReminderIcon: \{[\s\S]*width: 40,[\s\S]*height: 40,[\s\S]*borderRadius: 20/,
     /nextReminderContent: \{[\s\S]*minWidth: 0,[\s\S]*flex: 1/,
-    /nextReminderKicker: \{[\s\S]*fontSize: 11/,
+    /nextReminderKicker: \{[\s\S]*fontSize: 13/,
     /nextReminderTitle: \{[\s\S]*fontSize: 15/,
-    /nextReminderDateTime: \{[\s\S]*flexShrink: 0,[\s\S]*fontSize: 12/,
+    /nextReminderDateTime: \{[\s\S]*flexShrink: 0,[\s\S]*fontSize: 13,[\s\S]*fontVariant: \['tabular-nums'\]/,
     /nextReminderCardPressed: \{[\s\S]*opacity: 0\.88,[\s\S]*transform: \[\{ scale: 0\.99 \}\]/,
   ]);
 });

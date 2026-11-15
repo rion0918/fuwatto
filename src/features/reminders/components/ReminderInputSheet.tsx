@@ -924,8 +924,9 @@ export function ReminderInputSheet({
             <ImeSafeReminderTitleInput
               ref={titleInputRef}
               accessibilityLabel="リマインダーのタイトル"
+              label="タイトル"
               initialValue=""
-              placeholder="忘れたくないことを入力"
+              placeholder="例: 牛乳を買う"
               editable={voiceStatus === 'idle'}
               containerStyle={styles.inputField}
               onTextChange={handleDraftTitleChange}
@@ -934,7 +935,7 @@ export function ReminderInputSheet({
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="入力を閉じる"
-              hitSlop={8}
+              hitSlop={6}
               onPress={handleClosePress}
               style={styles.closeButton}
             >
@@ -979,7 +980,7 @@ export function ReminderInputSheet({
                     accessibilityRole="button"
                     accessibilityLabel="音声入力をキャンセル"
                     accessibilityHint="音声入力を取り消して元のタイトルに戻します"
-                    hitSlop={8}
+                    hitSlop={6}
                     pressRetentionOffset={12}
                     onPress={() => cancelVoiceInput(true)}
                     style={({ pressed }) => [
@@ -1081,9 +1082,9 @@ export function ReminderInputSheet({
                 <Pressable
                   accessibilityRole="button"
                   accessibilityLabel="日付選択を閉じる"
-                  hitSlop={8}
+                  hitSlop={6}
                   onPress={closeDatePicker}
-                  style={styles.closeButton}
+                  style={styles.pickerCloseButton}
                 >
                   <Ionicons name="close" size={20} color={palette.ink} />
                 </Pressable>
@@ -1135,20 +1136,33 @@ const styles = StyleSheet.create({
   },
   inputHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     gap: 8,
-    marginBottom: 8,
+    marginBottom: 10,
   },
   inputField: {
     flex: 1,
   },
   closeButton: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 48,
+    height: 48,
+    marginBottom: 4,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: palette.line,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F3F6FC',
+    backgroundColor: palette.cloud,
+  },
+  pickerCloseButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: palette.line,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: palette.cloud,
   },
   voiceButtonPressed: {
     opacity: 0.7,
@@ -1156,20 +1170,16 @@ const styles = StyleSheet.create({
   },
   voiceStatusPanel: {
     minHeight: 58,
-    marginBottom: 8,
+    marginBottom: 10,
     paddingHorizontal: 12,
+    paddingVertical: 8,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    borderRadius: 18,
+    borderRadius: 16,
     backgroundColor: palette.white,
     borderWidth: 1,
     borderColor: palette.line,
-    shadowColor: palette.lavenderDeep,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    elevation: 1,
   },
   voiceMeter: {
     width: 34,
@@ -1185,19 +1195,21 @@ const styles = StyleSheet.create({
   },
   voiceStatusTitle: {
     color: palette.ink,
-    fontSize: 13,
-    fontWeight: '900',
+    fontSize: 15,
+    lineHeight: 20,
+    fontWeight: '700',
   },
   voiceStatusHint: {
     marginTop: 2,
-    color: palette.muted,
-    fontSize: 11,
-    fontWeight: '700',
+    color: palette.inkSecondary,
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '500',
   },
   voiceCancelButton: {
-    minHeight: 34,
+    minHeight: 48,
     justifyContent: 'center',
-    paddingHorizontal: 8,
+    paddingHorizontal: 10,
   },
   voiceStatusActions: {
     flexDirection: 'row',
@@ -1205,41 +1217,41 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   voiceCancelText: {
-    color: palette.lavenderDeep,
-    fontSize: 11,
-    fontWeight: '900',
+    color: palette.ink,
+    fontSize: 13,
+    fontWeight: '600',
   },
   titleNoticeText: {
-    color: '#8B6F2D',
-    fontSize: 12,
-    fontWeight: '700',
+    color: palette.warningText,
+    fontSize: 13,
+    lineHeight: 19,
+    fontWeight: '600',
     marginBottom: 8,
     textAlign: 'center',
   },
   timeSelector: {
-    marginTop: 8,
+    marginTop: 10,
   },
   timingNoticeText: {
-    color: palette.peachDeep,
-    fontSize: 12,
-    fontWeight: '800',
+    color: palette.dangerText,
+    fontSize: 13,
+    fontWeight: '600',
     marginTop: 8,
     textAlign: 'center',
-    lineHeight: 18,
+    lineHeight: 19,
   },
   saveButton: {
     flex: 0.62,
-    minHeight: 48,
+    minHeight: 52,
     borderRadius: 16,
     paddingHorizontal: 12,
-    backgroundColor: palette.lavenderDeep,
   },
   actionRow: {
-    minHeight: 48,
+    minHeight: 52,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginTop: 10,
+    marginTop: 12,
   },
   modalOverlay: {
     flex: 1,
@@ -1251,35 +1263,38 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 420,
     maxHeight: '100%',
-    borderRadius: 26,
-    padding: 16,
-    backgroundColor: 'rgba(255,255,255,0.98)',
-    shadowColor: palette.shadow,
-    shadowOffset: { width: 0, height: 16 },
-    shadowOpacity: 0.18,
-    shadowRadius: 26,
-    elevation: 8,
+    borderRadius: 24,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: palette.line,
+    backgroundColor: palette.white,
+    shadowColor: palette.ink,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    elevation: 6,
   },
   pickerHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 6,
+    marginBottom: 8,
   },
   calendarTitle: {
     color: palette.ink,
-    fontSize: 17,
-    fontWeight: '800',
+    fontSize: 18,
+    lineHeight: 26,
+    fontWeight: '700',
   },
   calendarHint: {
-    color: palette.muted,
-    fontSize: 12,
-    fontWeight: '700',
+    color: palette.inkSecondary,
+    fontSize: 13,
+    lineHeight: 20,
+    fontWeight: '500',
     textAlign: 'center',
     marginTop: 10,
   },
   pickerButton: {
-    marginTop: 14,
-    backgroundColor: palette.skyDeep,
+    marginTop: 16,
   },
 });

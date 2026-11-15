@@ -198,6 +198,7 @@ export function ReminderScheduleEditorModal({
                     onPress={() => onConfirm(draft)}
                     style={({ pressed }) => [
                       styles.actionButton,
+                      styles.completeActionButton,
                       pressed && !isSaveDisabled ? styles.actionButtonPressed : null,
                       isSaveDisabled ? styles.actionButtonDisabled : null,
                     ]}
@@ -284,7 +285,7 @@ export function ReminderScheduleEditorModal({
                   <Ionicons
                     name="notifications-outline"
                     size={18}
-                    color={evaluated.isPreviousFuture ? palette.muted : palette.peachDeep}
+                    color={evaluated.isPreviousFuture ? palette.inkSecondary : palette.dangerText}
                   />
                   <Text
                     style={[
@@ -323,32 +324,35 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 460,
     maxHeight: '96%',
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
-    backgroundColor: 'rgba(255,255,255,0.99)',
-    shadowColor: palette.shadow,
-    shadowOffset: { width: 0, height: -12 },
-    shadowOpacity: 0.2,
-    shadowRadius: 28,
-    elevation: 12,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    backgroundColor: palette.white,
+    shadowColor: palette.ink,
+    shadowOffset: { width: 0, height: -8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 20,
+    elevation: 10,
   },
   content: {
-    paddingTop: 10,
+    paddingTop: 12,
     paddingHorizontal: 16,
   },
   actionBar: {
-    minHeight: 48,
+    minHeight: 52,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
   actionButton: {
     minWidth: 84,
-    minHeight: 44,
+    minHeight: 48,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 10,
+    paddingHorizontal: 14,
     borderRadius: 16,
+  },
+  completeActionButton: {
+    backgroundColor: palette.lavenderDeep,
   },
   actionButtonPressed: {
     opacity: 0.68,
@@ -358,33 +362,34 @@ const styles = StyleSheet.create({
     opacity: 0.42,
   },
   cancelActionText: {
-    color: palette.muted,
-    fontSize: 14,
-    fontWeight: '800',
+    color: palette.inkSecondary,
+    fontSize: 15,
+    fontWeight: '600',
   },
   completeActionText: {
-    color: palette.lavenderDeep,
-    fontSize: 14,
-    fontWeight: '900',
+    color: palette.white,
+    fontSize: 15,
+    fontWeight: '700',
   },
   scheduleSurface: {
-    marginTop: 8,
-    padding: 12,
+    marginTop: 10,
+    padding: 14,
     borderWidth: 1,
-    borderColor: 'rgba(197,215,241,0.68)',
+    borderColor: palette.line,
     borderRadius: 24,
-    backgroundColor: '#F3F7FE',
+    backgroundColor: palette.cloud,
   },
   editorSliderSpacing: {
-    marginTop: 10,
+    marginTop: 12,
   },
   scheduleLabel: {
     paddingHorizontal: 8,
     paddingTop: 2,
     paddingBottom: 6,
-    color: palette.muted,
-    fontSize: 12,
-    fontWeight: '800',
+    color: palette.inkSecondary,
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '600',
   },
   scheduleDateButton: {
     minHeight: 52,
@@ -401,7 +406,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   scheduleValueActive: {
-    backgroundColor: '#EEE8FF',
+    backgroundColor: palette.lavender,
   },
   scheduleValuePressed: {
     opacity: 0.76,
@@ -412,41 +417,41 @@ const styles = StyleSheet.create({
   },
   scheduleDateValue: {
     color: palette.ink,
-    fontSize: 17,
-    lineHeight: 23,
-    fontWeight: '900',
+    fontSize: 18,
+    lineHeight: 24,
+    fontWeight: '700',
     textAlign: 'center',
   },
   scheduleTimeValue: {
     color: palette.ink,
-    fontSize: 44,
-    lineHeight: 52,
-    fontWeight: '900',
-    letterSpacing: -0.9,
+    fontSize: 40,
+    lineHeight: 48,
+    fontWeight: '700',
+    fontVariant: ['tabular-nums'],
     textAlign: 'center',
   },
   scheduleDivider: {
     height: 1,
     marginHorizontal: 12,
-    backgroundColor: 'rgba(197,215,241,0.72)',
+    backgroundColor: palette.line,
   },
   pickerSurface: {
     marginTop: 10,
     paddingVertical: 4,
     borderWidth: 1,
-    borderColor: 'rgba(211,213,251,0.7)',
-    borderRadius: 22,
-    backgroundColor: '#F9FAFE',
+    borderColor: palette.line,
+    borderRadius: 20,
+    backgroundColor: palette.white,
   },
   inlinePicker: {
     alignItems: 'center',
   },
   targetWarning: {
     marginTop: 10,
-    color: palette.peachDeep,
-    fontSize: 12,
-    lineHeight: 18,
-    fontWeight: '800',
+    color: palette.dangerText,
+    fontSize: 13,
+    lineHeight: 19,
+    fontWeight: '600',
     textAlign: 'center',
   },
   previousNotice: {
@@ -463,12 +468,13 @@ const styles = StyleSheet.create({
   previousNoticeText: {
     minWidth: 0,
     flex: 1,
-    color: palette.muted,
-    fontSize: 12,
-    lineHeight: 18,
-    fontWeight: '700',
+    color: palette.inkSecondary,
+    fontSize: 13,
+    lineHeight: 19,
+    fontWeight: '500',
   },
   previousNoticeTextPast: {
-    color: palette.peachDeep,
+    color: palette.dangerText,
+    fontWeight: '600',
   },
 });

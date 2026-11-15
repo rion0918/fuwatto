@@ -268,10 +268,10 @@ export function ReminderListScreen() {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={isSelectionMode ? '選択モードを閉じる' : 'ホームに戻る'}
-          hitSlop={8}
+          hitSlop={6}
           onPress={handleHeaderBack}
           disabled={isDeletingReminders}
-          className="h-[44px] w-[44px] items-center justify-center rounded-[22px] border border-[rgba(255,255,255,0.90)] bg-[rgba(255,255,255,0.78)]"
+          className="h-[48px] w-[48px] items-center justify-center rounded-[24px] border border-app-line bg-app-white"
           style={({ pressed }) => (pressed ? styles.headerButtonPressed : null)}
         >
           <Ionicons
@@ -280,34 +280,34 @@ export function ReminderListScreen() {
             color={palette.ink}
           />
         </Pressable>
-        <Text className="text-[18px] font-black text-app-ink">
+        <Text className="text-[18px] font-bold leading-[26px] text-app-ink">
           {isSelectionMode ? `${selectedCount}件選択中` : 'すべての泡'}
         </Text>
-        <View className="w-[44px]" />
+        <View className="w-[48px]" />
       </View>
 
       <View
-        className="mb-[14px] mt-[18px] min-h-[94px] flex-row items-center justify-between gap-[14px] rounded-[28px] border border-[rgba(255,255,255,0.86)] bg-[rgba(255,255,255,0.68)] px-[18px] py-[18px]"
+        className="mb-[14px] mt-[16px] min-h-[88px] flex-row items-center justify-between gap-[14px] rounded-[24px] border border-app-line bg-app-white px-[18px] py-[16px]"
         style={styles.softShadow}
       >
         <View className="min-w-0 flex-1">
-          <Text numberOfLines={1} className="text-[12px] font-extrabold text-app-muted">
+          <Text numberOfLines={1} className="text-[13px] font-semibold text-app-ink-secondary">
             {listQuery || listFilter !== 'all' ? '検索条件に一致する泡' : '表示中の泡'}
           </Text>
           <Text
-            className="mt-[5px] text-[22px] font-black leading-[29px] text-app-ink"
+            className="mt-[4px] text-[22px] font-bold leading-[29px] text-app-ink"
             numberOfLines={2}
           >
             リマインドを一覧で見る
           </Text>
         </View>
-        <View className="min-h-[42px] min-w-[58px] max-w-[34%] shrink-0 items-center justify-center rounded-[21px] border border-[rgba(255,255,255,0.86)] bg-[rgba(237,230,255,0.84)] px-[12px]">
+        <View className="min-h-[42px] min-w-[58px] max-w-[34%] shrink-0 items-center justify-center rounded-[16px] border border-app-line bg-app-lavender px-[12px]">
           <Text
             numberOfLines={1}
             adjustsFontSizeToFit
             minimumFontScale={0.82}
-            className="text-[14px] font-black text-app-lavender-deep"
-            style={styles.noFontPadding}
+            className="text-[14px] font-bold text-app-ink"
+            style={[styles.noFontPadding, styles.tabularTime]}
           >
             {displayedReminders.length}件
           </Text>
@@ -316,29 +316,29 @@ export function ReminderListScreen() {
 
       {loading ? (
         <View className="flex-1 items-center justify-center px-[28px]">
-          <ActivityIndicator color={palette.skyDeep} />
-          <Text className="mt-[8px] text-center text-[13px] font-extrabold leading-[19px] text-app-muted">
+          <ActivityIndicator color={palette.ink} />
+          <Text className="mt-[10px] text-center text-[15px] font-medium leading-[23px] text-app-ink-secondary">
             泡を並べています
           </Text>
         </View>
       ) : error ? (
         <View className="flex-1 items-center justify-center px-[28px]">
-          <Text className="text-center text-[17px] font-black leading-[24px] text-app-ink">
+          <Text className="text-center text-[18px] font-bold leading-[26px] text-app-ink">
             うまく読めませんでした
           </Text>
-          <Text className="mt-[8px] text-center text-[13px] font-extrabold leading-[19px] text-app-muted">
+          <Text className="mt-[8px] text-center text-[15px] font-medium leading-[23px] text-app-ink-secondary">
             {error}
           </Text>
         </View>
       ) : displayedReminders.length === 0 ? (
         <View className="flex-1 items-center justify-center px-[28px]">
-          <View className="mb-[18px] h-[72px] w-[72px] items-center justify-center rounded-[36px] border-2 border-[rgba(255,255,255,0.68)] bg-[rgba(255,255,255,0.40)]">
+          <View className="mb-[18px] h-[72px] w-[72px] items-center justify-center rounded-[36px] border border-app-line bg-app-white">
             <Ionicons name="ellipse-outline" size={30} color={palette.lavenderDeep} />
           </View>
-          <Text className="text-center text-[17px] font-black leading-[24px] text-app-ink">
+          <Text className="text-center text-[18px] font-bold leading-[26px] text-app-ink">
             浮いている泡はありません
           </Text>
-          <Text className="mt-[8px] text-center text-[13px] font-extrabold leading-[19px] text-app-muted">
+          <Text className="mt-[8px] text-center text-[15px] font-medium leading-[23px] text-app-ink-secondary">
             ホームからふわっと追加しましょう
           </Text>
         </View>
@@ -384,9 +384,8 @@ export function ReminderListScreen() {
                   }
                 }}
                 disabled={isDeletingReminders}
-                className="mb-[10px] min-h-[72px] flex-row items-center gap-[12px] rounded-[24px] border border-[rgba(255,255,255,0.92)] bg-[rgba(255,255,255,0.82)] px-[14px]"
+                className="mb-[10px] min-h-[72px] flex-row items-center gap-[12px] rounded-[20px] border border-app-line bg-app-white px-[14px] py-[10px]"
                 style={({ pressed }) => [
-                  styles.softShadow,
                   isSelected ? styles.listItemSelected : null,
                   pressed ? styles.listItemPressed : null,
                 ]}
@@ -404,12 +403,16 @@ export function ReminderListScreen() {
                   <View className="absolute left-[10px] top-[8px] h-[8px] w-[14px] rotate-[-28deg] rounded-[7px] bg-[rgba(255,255,255,0.64)]" />
                 </View>
                 <View className="min-w-0 flex-1">
-                  <Text numberOfLines={1} className="text-[15px] font-black text-app-ink">
+                  <Text
+                    numberOfLines={1}
+                    className="text-[15px] font-bold leading-[22px] text-app-ink"
+                  >
                     {reminder.title}
                   </Text>
                   <Text
                     numberOfLines={1}
-                    className="mt-[4px] text-[12px] font-extrabold text-app-muted"
+                    className="mt-[3px] text-[13px] font-medium leading-[18px] text-app-ink-secondary"
+                    style={styles.tabularTime}
                   >
                     {formatReminderDateTime(reminder.targetAt, reminder.allDay)}
                   </Text>
@@ -427,7 +430,7 @@ export function ReminderListScreen() {
                     ) : null}
                   </View>
                 ) : (
-                  <Ionicons name="chevron-forward" size={18} color={palette.muted} />
+                  <Ionicons name="chevron-forward" size={18} color={palette.inkSecondary} />
                 )}
               </Pressable>
             );
@@ -474,13 +477,17 @@ const styles = StyleSheet.create({
     height: 76,
   },
   softShadow: {
-    shadowColor: palette.shadow,
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.08,
-    shadowRadius: 18,
+    shadowColor: palette.ink,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 1,
   },
   noFontPadding: {
     includeFontPadding: false,
+  },
+  tabularTime: {
+    fontVariant: ['tabular-nums'],
   },
   headerButtonPressed: {
     opacity: 0.78,
@@ -495,13 +502,14 @@ const styles = StyleSheet.create({
   },
   listItemSelected: {
     borderColor: palette.lavenderDeep,
-    backgroundColor: 'rgba(237,230,255,0.72)',
+    backgroundColor: palette.lavender,
   },
   selectionIndicator: {
-    borderColor: palette.lavenderDeep,
-    backgroundColor: 'rgba(255,255,255,0.66)',
+    borderColor: palette.controlLine,
+    backgroundColor: palette.white,
   },
   selectionIndicatorSelected: {
+    borderColor: palette.lavenderDeep,
     backgroundColor: palette.lavenderDeep,
   },
   listItemPressed: {

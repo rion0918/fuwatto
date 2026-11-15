@@ -662,6 +662,8 @@ export function SettingsScreen() {
       const result = await scheduleTestReminderNotifications({
         id: `dev_test_${Date.now()}`,
         title: '開発テスト',
+        allDay: false,
+        targetNotifyAt: now,
       });
       if (result.status === 'scheduled') {
         Alert.alert('予約しました', `10秒後と20秒後にテスト通知を送ります。\n${now}`);
@@ -705,18 +707,18 @@ export function SettingsScreen() {
           accessibilityLabel="ホームに戻る"
           hitSlop={8}
           onPress={handleBackPress}
-          className="h-[44px] w-[44px] items-center justify-center rounded-[22px] bg-[rgba(255,255,255,0.78)]"
+          className="h-[48px] w-[48px] items-center justify-center rounded-[24px] border border-app-line bg-app-white"
           style={({ pressed }) => [pressed ? styles.iconButtonPressed : null]}
         >
           <Ionicons name="chevron-back" size={24} color={palette.ink} />
         </Pressable>
-        <Text className="text-[18px] font-extrabold text-app-ink">設定</Text>
-        <View className="w-[44px]" />
+        <Text className="text-[19px] font-bold text-app-ink">設定</Text>
+        <View className="w-[48px]" />
       </View>
 
       {loading || !settings ? (
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator color={palette.skyDeep} />
+          <ActivityIndicator color={palette.ink} />
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -737,7 +739,9 @@ export function SettingsScreen() {
               title="終日のお知らせ"
               onPress={() => setIsAllDayTimePickerOpen(true)}
             >
-              <Text className="text-[14px] font-black text-app-lavender-deep">{allDayTime}</Text>
+              <Text className="text-[15px] font-bold text-app-ink" style={styles.tabularNums}>
+                {allDayTime}
+              </Text>
             </SettingRow>
             <SettingRow icon="notifications-outline" title="通知" onPress={handleOpenAppSettings}>
               <Pressable
@@ -745,14 +749,14 @@ export function SettingsScreen() {
                 accessibilityLabel="通知設定を開く"
                 onPress={() => void handleOpenAppSettings()}
                 hitSlop={4}
-                className="min-h-[44px] flex-row items-center gap-[8px] rounded-[14px]"
+                className="min-h-[48px] flex-row items-center gap-[8px] rounded-[14px]"
                 style={({ pressed }) => [pressed ? styles.timeValueButtonPressed : null]}
               >
                 <View
                   className={
                     isNotificationPermissionGranted
-                      ? 'flex-row items-center gap-[5px] rounded-[12px] bg-[#E9F8F1] px-[9px] py-[7px]'
-                      : 'flex-row items-center gap-[5px] rounded-[12px] bg-[#FFF4E7] px-[9px] py-[7px]'
+                      ? 'flex-row items-center gap-[5px] rounded-[12px] bg-[#E9F8F1] px-[10px] py-[7px]'
+                      : 'flex-row items-center gap-[5px] rounded-[12px] bg-app-warning-soft px-[10px] py-[7px]'
                   }
                 >
                   <Ionicons
@@ -760,19 +764,19 @@ export function SettingsScreen() {
                       isNotificationPermissionGranted ? 'checkmark-circle' : 'alert-circle-outline'
                     }
                     size={16}
-                    color={isNotificationPermissionGranted ? palette.mintDeep : palette.peachDeep}
+                    color={isNotificationPermissionGranted ? palette.mintDeep : palette.warningText}
                   />
                   <Text
                     className={
                       isNotificationPermissionGranted
-                        ? 'text-[12px] font-black text-app-mint-deep'
-                        : 'text-[12px] font-black text-app-peach-deep'
+                        ? 'text-[12px] font-bold text-app-mint-deep'
+                        : 'text-[12px] font-bold text-app-warning-text'
                     }
                   >
                     {notificationPermissionLabel}
                   </Text>
                 </View>
-                <Ionicons name="chevron-forward" size={18} color={palette.muted} />
+                <Ionicons name="chevron-forward" size={18} color={palette.inkSecondary} />
               </Pressable>
             </SettingRow>
             {!isNotificationPermissionGranted ? (
@@ -783,7 +787,7 @@ export function SettingsScreen() {
                     ? handleRequestNotificationPermission
                     : handleOpenAppSettings
                 }
-                className="mx-[46px] mb-[12px] min-h-[44px] flex-row items-center justify-center gap-[8px] rounded-[14px] bg-app-sky-deep px-[14px]"
+                className="mb-[8px] mt-[4px] min-h-[48px] flex-row items-center justify-center gap-[8px] rounded-[16px] bg-app-sky-deep px-[16px]"
               >
                 <Ionicons
                   name={
@@ -796,7 +800,7 @@ export function SettingsScreen() {
                   numberOfLines={1}
                   adjustsFontSizeToFit
                   minimumFontScale={0.72}
-                  className="shrink text-[14px] font-extrabold text-app-white"
+                  className="shrink text-[15px] font-bold text-app-white"
                   style={styles.noFontPadding}
                 >
                   {canAskNotificationPermissionAgain
@@ -815,7 +819,7 @@ export function SettingsScreen() {
                   icon={preset.icon}
                   value={settings[preset.key]}
                   color={
-                    [palette.skyDeep, palette.peachDeep, palette.lavenderDeep, palette.ink][index]
+                    [palette.skyDeep, palette.warningText, palette.lavenderDeep, palette.ink][index]
                   }
                   background={['#EDF5FF', '#FFF5E5', '#F2ECFF', '#EDF0F8'][index]}
                   onPress={() => setQuickAddPresetPickerKey(preset.key)}
@@ -837,8 +841,8 @@ export function SettingsScreen() {
                 onValueChange={(value) => {
                   void update({ autoDeleteEnabled: value });
                 }}
-                trackColor={{ false: '#DDE7F4', true: '#BFEBD9' }}
-                thumbColor={settings.autoDeleteEnabled ? palette.mintDeep : palette.white}
+                trackColor={{ false: '#CBD5E1', true: palette.mintDeep }}
+                thumbColor={palette.white}
               />
             </SettingRow>
             <SettingsAutoDeletePreview enabled={settings.autoDeleteEnabled} />
@@ -849,39 +853,39 @@ export function SettingsScreen() {
               onPress={() => void handleRaiseToSpeakEnabledChange(!settings.raiseToSpeakEnabled)}
             >
               {isRaiseToSpeakUpdatePending ? (
-                <ActivityIndicator size="small" color={palette.lavenderDeep} />
+                <ActivityIndicator size="small" color={palette.ink} />
               ) : (
                 <Switch
                   accessibilityLabel="左右に傾けて音声入力"
                   value={settings.raiseToSpeakEnabled}
                   onValueChange={(value) => void handleRaiseToSpeakEnabledChange(value)}
-                  trackColor={{ false: '#DDE7F4', true: '#D8CCFF' }}
-                  thumbColor={settings.raiseToSpeakEnabled ? palette.lavenderDeep : palette.white}
+                  trackColor={{ false: '#CBD5E1', true: palette.mintDeep }}
+                  thumbColor={palette.white}
                 />
               )}
             </SettingRow>
             <SettingsVoicePreview enabled={settings.raiseToSpeakEnabled} />
           </SettingsSection>
           <View style={styles.informationHeading}>
-            <Text accessibilityRole="header" className="text-[15px] font-extrabold text-app-ink">
+            <Text accessibilityRole="header" className="text-[16px] font-bold text-app-ink">
               Pro・アプリ情報
             </Text>
           </View>
           {isNativePurchasePlatform ? (
-            <View className="mb-[18px] rounded-[24px] border border-[rgba(168,145,245,0.26)] bg-[rgba(255,255,255,0.88)] px-[16px] py-[14px]">
+            <View className="mb-[18px] rounded-[24px] border border-app-line bg-app-white px-[16px] py-[14px]">
               {isProAccessLoading || proAccessState === 'pro' ? (
-                <View className="min-h-[64px] flex-row items-center gap-[12px] py-[10px]">
+                <View className="min-h-[60px] flex-row items-center gap-[12px] py-[10px]">
                   <View className="h-[38px] w-[38px] items-center justify-center rounded-[19px] bg-[#EEE8FF]">
                     <Ionicons name="infinite-outline" size={22} color={palette.lavenderDeep} />
                   </View>
-                  <Text className="min-w-0 flex-1 text-[16px] font-black text-app-lavender-deep">
+                  <Text className="min-w-0 flex-1 text-[16px] font-bold text-app-lavender-deep">
                     Pro版ふわっと。
                   </Text>
                   {isProAccessLoading ? (
                     <ActivityIndicator size="small" color={palette.lavenderDeep} />
                   ) : (
-                    <View className="rounded-[14px] bg-[#E9F8F1] px-[12px] py-[8px]">
-                      <Text className="text-[12px] font-black text-app-mint-deep">Pro利用中</Text>
+                    <View className="rounded-[12px] bg-[#E9F8F1] px-[12px] py-[7px]">
+                      <Text className="text-[12px] font-bold text-app-mint-deep">Pro利用中</Text>
                     </View>
                   )}
                 </View>
@@ -892,7 +896,7 @@ export function SettingsScreen() {
                   accessibilityState={{ disabled: isPurchaseActionPending }}
                   disabled={isPurchaseActionPending}
                   onPress={() => void handleOpenProPaywall()}
-                  className="min-h-[64px] flex-row items-center gap-[12px] py-[10px]"
+                  className="min-h-[60px] flex-row items-center gap-[12px] py-[10px]"
                   style={({ pressed }) => [pressed ? styles.timeValueButtonPressed : null]}
                 >
                   <View className="h-[38px] w-[38px] items-center justify-center rounded-[19px] bg-[#EEE8FF]">
@@ -907,7 +911,7 @@ export function SettingsScreen() {
                     numberOfLines={1}
                     adjustsFontSizeToFit
                     minimumFontScale={0.85}
-                    className="min-w-0 flex-1 text-[15px] font-black text-app-lavender-deep"
+                    className="min-w-0 flex-1 text-[16px] font-bold text-app-lavender-deep"
                   >
                     Proにアップグレードする
                   </Text>
@@ -923,10 +927,10 @@ export function SettingsScreen() {
                   accessibilityState={{ disabled: isPurchaseActionPending }}
                   disabled={isPurchaseActionPending}
                   onPress={() => void handleRestoreProPurchase()}
-                  className="min-h-[44px] items-center justify-center py-[8px]"
+                  className="min-h-[48px] items-center justify-center py-[8px]"
                   style={({ pressed }) => [pressed ? styles.timeValueButtonPressed : null]}
                 >
-                  <Text className="text-[12px] font-semibold text-app-muted underline">
+                  <Text className="text-[13px] font-semibold text-app-ink-secondary underline">
                     購入済みの方はこちら
                   </Text>
                 </Pressable>
@@ -934,10 +938,10 @@ export function SettingsScreen() {
             </View>
           ) : null}
 
-          <View className="mb-[18px] rounded-[24px] bg-[rgba(255,255,255,0.82)] px-[16px] py-[4px]">
+          <View className="mb-[18px] rounded-[24px] border border-app-line bg-app-white px-[16px] py-[4px]">
             <SettingRow icon="analytics-outline" title="匿名の利用状況を共有">
               {isAnalyticsPreferenceLoading ? (
-                <ActivityIndicator size="small" color={palette.lavenderDeep} />
+                <ActivityIndicator size="small" color={palette.ink} />
               ) : (
                 <Switch
                   accessibilityLabel="匿名の利用状況を共有"
@@ -945,47 +949,47 @@ export function SettingsScreen() {
                   value={isAnalyticsEnabled}
                   disabled={!analytics.configured}
                   onValueChange={(value) => void handleAnalyticsEnabledChange(value)}
-                  trackColor={{ false: '#DDE7F4', true: '#D8CCFF' }}
-                  thumbColor={isAnalyticsEnabled ? palette.lavenderDeep : palette.white}
+                  trackColor={{ false: '#CBD5E1', true: palette.mintDeep }}
+                  thumbColor={palette.white}
                 />
               )}
             </SettingRow>
-            <View className="ml-[46px] h-px bg-[rgba(220,233,247,0.78)]" />
+            <View className="ml-[46px] h-px bg-app-line" />
             <SettingRow
               icon="shield-checkmark-outline"
               title="プライバシーポリシー"
               onPress={() => setLegalDocument(privacyPolicyDocument)}
             >
-              <Ionicons name="chevron-forward" size={18} color={palette.muted} />
+              <Ionicons name="chevron-forward" size={18} color={palette.inkSecondary} />
             </SettingRow>
-            <View className="ml-[46px] h-px bg-[rgba(220,233,247,0.78)]" />
+            <View className="ml-[46px] h-px bg-app-line" />
             <SettingRow
               icon="document-text-outline"
               title="利用規約"
               onPress={() => setLegalDocument(termsDocument)}
             >
-              <Ionicons name="chevron-forward" size={18} color={palette.muted} />
+              <Ionicons name="chevron-forward" size={18} color={palette.inkSecondary} />
             </SettingRow>
-            <View className="ml-[46px] h-px bg-[rgba(220,233,247,0.78)]" />
+            <View className="ml-[46px] h-px bg-app-line" />
             <SettingRow
               icon="information-circle-outline"
               title="第三者ライセンス"
               onPress={() => setLegalDocument(thirdPartyLicensesDocument)}
             >
-              <Ionicons name="chevron-forward" size={18} color={palette.muted} />
+              <Ionicons name="chevron-forward" size={18} color={palette.inkSecondary} />
             </SettingRow>
           </View>
 
           <View style={styles.brand}>
             <Image source={appIcon} style={styles.brandIcon} accessibilityIgnoresInvertColors />
-            <Text className="text-[14px] font-extrabold text-app-muted">ふわっと。</Text>
+            <Text className="text-[14px] font-bold text-app-ink-secondary">ふわっと。</Text>
           </View>
 
           {__DEV__ ? (
-            <View className="mb-[18px] rounded-[24px] border border-[rgba(168,145,245,0.22)] bg-[rgba(255,255,255,0.88)] px-[16px] py-[14px]">
+            <View className="mb-[18px] rounded-[24px] border border-app-line bg-app-white px-[16px] py-[14px]">
               <View className="mb-[6px] flex-row items-center gap-[8px]">
                 <Ionicons name="flask-outline" size={20} color={palette.lavenderDeep} />
-                <Text className="text-[16px] font-black text-app-ink">開発用通知テスト</Text>
+                <Text className="text-[16px] font-bold text-app-ink">開発用通知テスト</Text>
               </View>
 
               <SettingRow
@@ -998,22 +1002,22 @@ export function SettingsScreen() {
                 <Switch
                   value={isNotificationTestModeEnabled}
                   onValueChange={setNotificationTestModeEnabled}
-                  trackColor={{ false: '#DDE7F4', true: '#D8CCFF' }}
-                  thumbColor={isNotificationTestModeEnabled ? palette.lavenderDeep : palette.white}
+                  trackColor={{ false: '#CBD5E1', true: palette.mintDeep }}
+                  thumbColor={palette.white}
                 />
               </SettingRow>
-              <View className="ml-[46px] h-px bg-[rgba(220,233,247,0.78)]" />
+              <View className="ml-[46px] h-px bg-app-line" />
               <Pressable
                 accessibilityRole="button"
                 onPress={handleSendTestNotification}
-                className="mt-[10px] min-h-[44px] flex-row items-center justify-center gap-[8px] rounded-[14px] bg-app-lavender-deep px-[14px]"
+                className="mt-[10px] min-h-[48px] flex-row items-center justify-center gap-[8px] rounded-[16px] bg-app-sky-deep px-[16px]"
               >
                 <Ionicons name="paper-plane-outline" size={18} color={palette.white} />
                 <Text
                   numberOfLines={1}
                   adjustsFontSizeToFit
                   minimumFontScale={0.72}
-                  className="shrink text-[14px] font-extrabold text-app-white"
+                  className="shrink text-[15px] font-bold text-app-white"
                   style={styles.noFontPadding}
                 >
                   テスト通知を送る
@@ -1023,14 +1027,14 @@ export function SettingsScreen() {
               <Pressable
                 accessibilityRole="button"
                 onPress={handleCancelAllNotifications}
-                className="mt-[10px] min-h-[44px] flex-row items-center justify-center gap-[8px] rounded-[14px] border border-app-line bg-[rgba(246,250,255,0.96)] px-[14px]"
+                className="mt-[10px] min-h-[48px] flex-row items-center justify-center gap-[8px] rounded-[16px] border border-app-line bg-app-cloud px-[16px]"
               >
                 <Ionicons name="close-circle-outline" size={18} color={palette.ink} />
                 <Text
                   numberOfLines={1}
                   adjustsFontSizeToFit
                   minimumFontScale={0.72}
-                  className="shrink text-[14px] font-extrabold text-app-ink"
+                  className="shrink text-[15px] font-bold text-app-ink"
                   style={styles.noFontPadding}
                 >
                   予約済み通知を全キャンセル
@@ -1114,7 +1118,7 @@ function LegalDocumentModal({ document, onClose }: LegalDocumentModalProps) {
       onRequestClose={onClose}
     >
       <View
-        className="flex-1 items-center justify-end bg-[rgba(38,49,81,0.26)]"
+        className="flex-1 items-center justify-end bg-[rgba(38,49,81,0.28)]"
         style={{
           paddingTop: Math.max(14, safeAreaInsets.top + 12),
           paddingBottom: Math.max(14, safeAreaInsets.bottom + 12),
@@ -1124,15 +1128,18 @@ function LegalDocumentModal({ document, onClose }: LegalDocumentModalProps) {
       >
         <View
           accessibilityViewIsModal
-          className="max-h-[84%] w-full max-w-[560px] rounded-[28px] bg-[rgba(255,255,255,0.96)] px-[18px] pt-[18px]"
+          className="max-h-[84%] w-full max-w-[560px] rounded-[24px] border border-app-line bg-app-white px-[20px] pt-[18px]"
           style={styles.legalModalShadow}
         >
-          <View className="flex-row items-center justify-between gap-[14px] border-b border-[rgba(220,233,247,0.78)] pb-[12px]">
+          <View className="flex-row items-center justify-between gap-[14px] border-b border-app-line pb-[12px]">
             <View className="min-w-0 flex-1">
-              <Text numberOfLines={2} className="text-[18px] font-black text-app-ink">
+              <Text numberOfLines={2} className="text-[19px] font-bold leading-[26px] text-app-ink">
                 {document?.title}
               </Text>
-              <Text numberOfLines={1} className="mt-[4px] text-[12px] font-bold text-app-muted">
+              <Text
+                numberOfLines={1}
+                className="mt-[4px] text-[13px] font-medium text-app-ink-secondary"
+              >
                 最終更新日: {document?.updatedAt}
               </Text>
             </View>
@@ -1141,7 +1148,7 @@ function LegalDocumentModal({ document, onClose }: LegalDocumentModalProps) {
               accessibilityLabel="閉じる"
               hitSlop={8}
               onPress={onClose}
-              className="h-[42px] w-[42px] shrink-0 items-center justify-center rounded-[21px] border border-app-line bg-[#F6FAFF]"
+              className="h-[48px] w-[48px] shrink-0 items-center justify-center rounded-[24px] border border-app-line bg-app-cloud"
             >
               <Ionicons name="close" size={20} color={palette.ink} />
             </Pressable>
@@ -1151,11 +1158,11 @@ function LegalDocumentModal({ document, onClose }: LegalDocumentModalProps) {
             showsVerticalScrollIndicator={false}
           >
             {document?.sections.map((section) => (
-              <View key={section.title} className="mt-[12px]">
-                <Text className="mb-[5px] text-[14px] font-black text-app-ink">
+              <View key={section.title} className="mt-[14px]">
+                <Text className="mb-[6px] text-[15px] font-bold leading-[22px] text-app-ink">
                   {section.title}
                 </Text>
-                <Text className="text-[13px] font-semibold leading-[21px] text-app-muted">
+                <Text className="text-[14px] font-normal leading-[22px] text-app-ink">
                   {section.body}
                 </Text>
               </View>
@@ -1174,7 +1181,7 @@ const styles = StyleSheet.create({
   },
   presetGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   divider: { height: 1, backgroundColor: palette.line, marginVertical: 8 },
-  informationHeading: { marginTop: 28, marginBottom: 14, marginLeft: 4 },
+  informationHeading: { marginTop: 24, marginBottom: 12, marginLeft: 4 },
   brand: { alignItems: 'center', gap: 10, paddingVertical: 24 },
   brandIcon: { width: 48, height: 48, borderRadius: 14 },
   content: {
@@ -1193,11 +1200,14 @@ const styles = StyleSheet.create({
   noFontPadding: {
     includeFontPadding: false,
   },
+  tabularNums: {
+    fontVariant: ['tabular-nums'],
+  },
   legalModalShadow: {
-    shadowColor: '#7DB5E8',
-    shadowOpacity: 0.24,
-    shadowRadius: 28,
-    shadowOffset: { width: 0, height: 16 },
+    shadowColor: palette.ink,
+    shadowOpacity: 0.14,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 10 },
   },
   legalModalContent: {
     paddingTop: 6,

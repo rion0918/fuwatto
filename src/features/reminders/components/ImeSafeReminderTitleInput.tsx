@@ -12,6 +12,7 @@ import { Text, View } from 'react-native';
 import type { StyleProp, TextStyle, ViewStyle } from 'react-native';
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 
+import { palette } from '../../../constants/colors';
 import { REMINDER_TITLE_MAX_LENGTH } from '../schemas/reminderSchema';
 import { reminderTitleInputStyles } from './reminderTitleInputStyles';
 
@@ -27,6 +28,7 @@ export type ImeSafeReminderTitleInputHandle = {
 
 type ImeSafeReminderTitleInputProps = {
   accessibilityLabel: string;
+  label?: string;
   initialValue?: string;
   placeholder?: string;
   placeholderTextColor?: string;
@@ -49,9 +51,10 @@ const ImeSafeReminderTitleInputComponent = forwardRef<
 >(function ImeSafeReminderTitleInput(
   {
     accessibilityLabel,
+    label,
     initialValue = '',
     placeholder,
-    placeholderTextColor = '#A6B2CE',
+    placeholderTextColor = palette.placeholder,
     editable = true,
     containerStyle,
     inputStyle,
@@ -146,44 +149,49 @@ const ImeSafeReminderTitleInputComponent = forwardRef<
     : `タイトルは${titleLength}文字、あと${REMINDER_TITLE_MAX_LENGTH - titleLength}文字入力できます`;
 
   return (
-    <View style={[reminderTitleInputStyles.container, containerStyle]}>
-      <BottomSheetTextInput
-        key={nativeRevision}
-        ref={inputRef}
-        accessibilityLabel={accessibilityLabel}
-        defaultValue={nativeTextRef.current}
-        onChangeText={handleChangeText}
-        onFocus={() => setIsFocused(true)}
-        onBlur={() => setIsFocused(false)}
-        onEndEditing={handleEndEditing}
-        placeholder={placeholder}
-        placeholderTextColor={placeholderTextColor}
-        editable={editable}
-        keyboardType="default"
-        autoCorrect
-        spellCheck={false}
-        autoCapitalize="none"
-        returnKeyType="done"
-        submitBehavior="blurAndSubmit"
-        multiline={false}
-        style={[
-          reminderTitleInputStyles.input,
-          inputStyle,
-          isFocused ? [reminderTitleInputStyles.inputFocused, focusedInputStyle] : null,
-        ]}
-      />
-      <Text
-        accessibilityRole="text"
-        accessibilityLabel={titleCountAccessibilityLabel}
-        style={[
-          reminderTitleInputStyles.count,
-          countStyle,
-          isTitleCountWarning ? [reminderTitleInputStyles.countWarning, countWarningStyle] : null,
-          isTitleOverLimit ? [reminderTitleInputStyles.countOverLimit, countOverLimitStyle] : null,
-        ]}
-      >
-        {titleLength} / {REMINDER_TITLE_MAX_LENGTH}
-      </Text>
+    <View style={containerStyle}>
+      {label ? <Text style={reminderTitleInputStyles.label}>{label}</Text> : null}
+      <View style={reminderTitleInputStyles.container}>
+        <BottomSheetTextInput
+          key={nativeRevision}
+          ref={inputRef}
+          accessibilityLabel={accessibilityLabel}
+          defaultValue={nativeTextRef.current}
+          onChangeText={handleChangeText}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
+          onEndEditing={handleEndEditing}
+          placeholder={placeholder}
+          placeholderTextColor={placeholderTextColor}
+          editable={editable}
+          keyboardType="default"
+          autoCorrect
+          spellCheck={false}
+          autoCapitalize="none"
+          returnKeyType="done"
+          submitBehavior="blurAndSubmit"
+          multiline={false}
+          style={[
+            reminderTitleInputStyles.input,
+            inputStyle,
+            isFocused ? [reminderTitleInputStyles.inputFocused, focusedInputStyle] : null,
+          ]}
+        />
+        <Text
+          accessibilityRole="text"
+          accessibilityLabel={titleCountAccessibilityLabel}
+          style={[
+            reminderTitleInputStyles.count,
+            countStyle,
+            isTitleCountWarning ? [reminderTitleInputStyles.countWarning, countWarningStyle] : null,
+            isTitleOverLimit
+              ? [reminderTitleInputStyles.countOverLimit, countOverLimitStyle]
+              : null,
+          ]}
+        >
+          {titleLength} / {REMINDER_TITLE_MAX_LENGTH}
+        </Text>
+      </View>
     </View>
   );
 });

@@ -6,10 +6,13 @@ export const themeOptions: AppTheme[] = [...APP_THEME_OPTIONS];
 
 export const palette = {
   ink: '#263151',
+  inkSecondary: '#4D5978',
   muted: '#7280A3',
+  placeholder: '#616E8E',
   disabledBackground: '#E5E7EB',
   disabledText: '#6B7280',
   line: '#DCE9F7',
+  controlLine: '#8194B3',
   white: '#FFFFFF',
   cloud: '#F7FBFF',
   sky: '#DCEBFF',
@@ -20,6 +23,10 @@ export const palette = {
   mintDeep: '#12866A',
   peach: '#FFF1D8',
   peachDeep: '#F0A84D',
+  warningText: '#9A520A',
+  warningSoft: '#FFF4E7',
+  dangerText: '#B43444',
+  dangerSoft: '#FDECEF',
   shadow: '#7DB5E8',
 };
 
@@ -27,7 +34,7 @@ export const addButtonVisualTokens = {
   gradientFrom: '#F8FBFF',
   gradientTo: '#D8E8F7',
   border: 'rgba(255,255,255,0.96)',
-  text: '#50658F',
+  text: '#263151',
 } as const;
 
 export const appThemes: Record<

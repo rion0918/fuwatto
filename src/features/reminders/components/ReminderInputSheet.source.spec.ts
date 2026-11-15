@@ -42,7 +42,7 @@ test('quick add shows a live accessible title character count from the validatio
 
 test('quick add keeps the title input at the standard body text size', () => {
   assertSourceIncludes(titleInputStylesSource, [
-    /input: \{[\s\S]*?fontSize: 14,[\s\S]*?lineHeight: 22,[\s\S]*?fontWeight: '700',/,
+    /input: \{[\s\S]*?fontSize: 15,[\s\S]*?lineHeight: 23,[\s\S]*?fontWeight: '500',/,
   ]);
 });
 
