@@ -106,6 +106,7 @@ export type ReminderNotificationGateway = {
     options: ReminderNotificationScheduleOptions,
   ): Promise<ReminderSingleNotificationScheduleResult>;
   getLegacyScheduledNotificationIds(notificationIds: (string | null)[]): Promise<Set<string>>;
+  deleteLegacyChannels?(): Promise<void>;
   cancel(reminder: Reminder): Promise<void>;
   cancelOne(notificationId: string | null): Promise<void>;
 };

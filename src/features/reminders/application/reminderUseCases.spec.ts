@@ -1286,7 +1286,7 @@ test('legacy silent-channel notifications are migrated once without duplicating 
     'cancel-one:legacy-target',
     'update-previous:new-previous',
     'cancel-one:legacy-previous',
-    'notification-channel-version:1',
+    'notification-channel-version:2',
   ]);
 });
 
@@ -1309,7 +1309,7 @@ test('already migrated notifications are not scheduled again', async () => {
 
   await createReminderUseCases(dependencies).migrateLegacyNotificationChannels();
 
-  assert.deepEqual(events, ['notification-channel-version:1']);
+  assert.deepEqual(events, ['notification-channel-version:2']);
 });
 
 test('failed channel migration remains pending for the next startup', async () => {
@@ -1340,7 +1340,7 @@ test('failed channel migration remains pending for the next startup', async () =
   assert.deepEqual(events, [
     'update-target:new-target',
     'cancel-one:legacy-target',
-    'notification-channel-version:1',
+    'notification-channel-version:2',
   ]);
 });
 
@@ -1387,7 +1387,7 @@ test('target channel migration keeps the legacy notification when database persi
     'schedule-target',
     'update-target:new-target',
     'cancel-one:legacy-target',
-    'notification-channel-version:1',
+    'notification-channel-version:2',
   ]);
 });
 
@@ -1434,7 +1434,7 @@ test('previous channel migration keeps the legacy notification when database per
     'schedule-previous',
     'update-previous:new-previous',
     'cancel-one:legacy-previous',
-    'notification-channel-version:1',
+    'notification-channel-version:2',
   ]);
 });
 
@@ -1475,7 +1475,7 @@ test('past target migration keeps the legacy notification until the null ID is p
     'update-target:null',
     'update-target:null',
     'cancel-one:legacy-target',
-    'notification-channel-version:1',
+    'notification-channel-version:2',
   ]);
 });
 
@@ -1529,7 +1529,7 @@ test('target channel migration rolls back when the legacy notification cannot be
     'schedule-target',
     'update-target:new-target',
     'cancel-one:legacy-target',
-    'notification-channel-version:1',
+    'notification-channel-version:2',
   ]);
 });
 
@@ -1583,7 +1583,98 @@ test('previous channel migration rolls back when the legacy notification cannot 
     'schedule-previous',
     'update-previous:new-previous',
     'cancel-one:legacy-previous',
-    'notification-channel-version:1',
+    'notification-channel-version:2',
+  ]);
+});
+
+test('version 1 notification channels migrate to version 2 and clean up legacy channels only when complete', async () => {
+  const events: string[] = [];
+  const dependencies = makeDependencies(events);
+  let version = 1;
+  dependencies.notificationChannelMigration = {
+    getVersion: async () => version,
+    setVersion: async (nextVersion) => {
+      version = nextVersion;
+      events.push(`notification-channel-version:${nextVersion}`);
+    },
+  };
+  const candidate: Reminder = { ...reminder, targetNotificationId: 'legacy-default' };
+  let current = candidate;
+  dependencies.reminders.listActive = async () => [current];
+  dependencies.reminders.updateTargetSchedule = async (_id, update) => {
+    current = { ...current, ...update };
+    events.push(`update-target:${update.targetNotificationId ?? 'null'}`);
+    return current;
+  };
+  dependencies.notifications.getLegacyScheduledNotificationIds = async () =>
+    new Set(['legacy-default']);
+  let attempts = 0;
+  dependencies.notifications.scheduleTarget = async () => {
+    attempts += 1;
+    if (attempts === 1) {
+      return {
+        status: 'not-scheduled',
+        reason: 'scheduling-failed',
+        notificationId: null,
+      };
+    }
+    return { status: 'scheduled', notificationId: 'high-target' };
+  };
+  dependencies.notifications.deleteLegacyChannels = async () => {
+    events.push('delete-legacy-channels');
+  };
+
+  const useCases = createReminderUseCases(dependencies);
+  await useCases.migrateLegacyNotificationChannels();
+  assert.equal(version, 1);
+  assert.deepEqual(events, []);
+
+  await useCases.migrateLegacyNotificationChannels();
+  assert.equal(version, 2);
+  assert.deepEqual(events, [
+    'update-target:high-target',
+    'cancel-one:legacy-default',
+    'delete-legacy-channels',
+    'notification-channel-version:2',
+  ]);
+
+  await useCases.migrateLegacyNotificationChannels();
+  assert.equal(events.length, 4);
+});
+
+test('failed legacy channel cleanup remains pending for retry', async () => {
+  const events: string[] = [];
+  const dependencies = makeDependencies(events);
+  let version = 1;
+  dependencies.notificationChannelMigration = {
+    getVersion: async () => version,
+    setVersion: async (nextVersion) => {
+      version = nextVersion;
+      events.push(`notification-channel-version:${nextVersion}`);
+    },
+  };
+  dependencies.reminders.listActive = async () => [];
+  dependencies.notifications.getLegacyScheduledNotificationIds = async () => new Set();
+  let deleteAttempts = 0;
+  dependencies.notifications.deleteLegacyChannels = async () => {
+    deleteAttempts += 1;
+    events.push('delete-legacy-channels');
+    if (deleteAttempts === 1) {
+      throw new Error('channel deletion failed');
+    }
+  };
+
+  const useCases = createReminderUseCases(dependencies);
+  await useCases.migrateLegacyNotificationChannels();
+  assert.equal(version, 1);
+  assert.deepEqual(events, ['delete-legacy-channels']);
+
+  await useCases.migrateLegacyNotificationChannels();
+  assert.equal(version, 2);
+  assert.deepEqual(events, [
+    'delete-legacy-channels',
+    'delete-legacy-channels',
+    'notification-channel-version:2',
   ]);
 });
 

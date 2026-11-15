@@ -29,6 +29,7 @@
 
 ### 🎨 デザイン & UX
 
+- **[通知文言・情報設計メモ (NOTIFICATION_DESIGN.md)](NOTIFICATION_DESIGN.md)**: 前日・当日通知の役割分担、採用文言 4 パターン、実機評価条件。
 - **[UI/UX レビュー記録 (UI_UX_REVIEW_BEFORE.md)](UI_UX_REVIEW_BEFORE.md)**: アプリ改善前後のデザイン分析および変更履歴。
 
 ---

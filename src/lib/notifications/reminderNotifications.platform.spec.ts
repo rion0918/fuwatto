@@ -5,18 +5,23 @@ import { assertSourceIncludes, readSource } from '../../test-utils/sourceAsserti
 
 const source = readSource(import.meta.url, './reminderNotifications.ts');
 
-test('scheduled notifications use the fuwatto display name', () => {
-  assert.equal(source.match(/title: 'ふわっと。'/g)?.length, 2);
+test('scheduled notifications use reminder time and title instead of the app name', () => {
+  assert.equal(source.includes("title: 'ふわっと。'"), false);
+  assert.equal(source.includes("title: '前日のお知らせ'"), false);
   assert.equal(source.includes("title: 'ポップ・リマインダー'"), false);
+  assert.equal(source.includes('ふわっと残しています'), false);
 });
 
-test('notification setup uses one OS-controlled Android channel', () => {
+test('notification setup uses one high-importance OS-controlled Android channel', () => {
   assertSourceIncludes(source, [
-    /REMINDER_NOTIFICATION_CHANNEL_ID = 'reminder-alerts'/,
+    /REMINDER_NOTIFICATION_CHANNEL_ID = 'reminder-alerts-high'/,
     /configureAndroidNotificationChannels/,
     /Notifications\.setNotificationChannelAsync\(REMINDER_NOTIFICATION_CHANNEL_ID/,
+    /importance:\s*Notifications\.AndroidImportance\.HIGH/,
+    /priority:\s*Notifications\.AndroidNotificationPriority\.HIGH/,
   ]);
   assert.equal(source.includes("setNotificationChannelAsync('reminder-silent'"), false);
+  assert.equal(source.includes("setNotificationChannelAsync('reminder-alerts'"), false);
   assert.equal(source.includes('通知音なし'), false);
 });
 
@@ -29,11 +34,14 @@ test('scheduled notifications delegate sound behavior to the OS settings', () =>
   assert.equal(source.includes('soundEnabled'), false);
 });
 
-test('legacy silent-channel notifications can be identified for migration', () => {
+test('legacy silent and default-importance channels can be identified and cleaned up after migration', () => {
   assertSourceIncludes(source, [
     /getLegacyScheduledNotificationIds/,
     /Notifications\.getAllScheduledNotificationsAsync\(\)/,
+    /deleteLegacyAndroidNotificationChannels/,
+    /Notifications\.deleteNotificationChannelAsync\(/,
     /reminder-silent/,
+    /reminder-alerts/,
   ]);
 });
 
@@ -67,11 +75,17 @@ test('notification gateway can replace target and previous notifications indepen
   ]);
 });
 
-test('target notification body is shared by single and full scheduling paths', () => {
+test('target and previous notification contents are shared by single, full, and test scheduling paths', () => {
   assertSourceIncludes(source, [
-    /function buildTargetNotificationBody\(/,
-    /body: buildTargetNotificationBody\(reminder\)/,
+    /buildTargetNotificationContent/,
+    /buildPreviousNotificationContent/,
   ]);
+  assert.equal(source.match(/buildTargetNotificationContent\(reminder\)/g)?.length, 2);
+  assert.equal(source.match(/buildPreviousNotificationContent\(reminder\)/g)?.length, 2);
+  assert.equal(source.match(/buildTargetNotificationContent\(/g)?.length, 3);
+  assert.equal(source.match(/buildPreviousNotificationContent\(/g)?.length, 3);
+  assert.equal(source.includes("title: '通知テスト 当日'"), false);
+  assert.equal(source.includes("title: '通知テスト 前日'"), false);
   assert.equal(/body: `「\$\{reminder\.title\}」の時間をお知らせします`/.test(source), false);
 });
 

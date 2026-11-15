@@ -69,6 +69,8 @@ const schedulingFailedResult: ReminderNotificationScheduleResult = {
   },
 };
 
+const CURRENT_NOTIFICATION_CHANNEL_VERSION = 2;
+
 export function createReminderUseCases(dependencies: ReminderApplicationDependencies) {
   const { reminders, notifications, settings, widget, proAccess, notificationChannelMigration } =
     dependencies;
@@ -249,7 +251,9 @@ export function createReminderUseCases(dependencies: ReminderApplicationDependen
     },
 
     async migrateLegacyNotificationChannels() {
-      if ((await notificationChannelMigration.getVersion()) >= 1) {
+      if (
+        (await notificationChannelMigration.getVersion()) >= CURRENT_NOTIFICATION_CHANNEL_VERSION
+      ) {
         return;
       }
 
@@ -442,7 +446,15 @@ export function createReminderUseCases(dependencies: ReminderApplicationDependen
       }
 
       if (!migrationPending) {
-        await notificationChannelMigration.setVersion(1);
+        try {
+          await notifications.deleteLegacyChannels?.();
+        } catch (error) {
+          console.warn('Failed to delete legacy notification channels', error);
+          migrationPending = true;
+        }
+        if (!migrationPending) {
+          await notificationChannelMigration.setVersion(CURRENT_NOTIFICATION_CHANNEL_VERSION);
+        }
       }
     },
 
