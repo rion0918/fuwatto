@@ -1,0 +1,74 @@
+{
+  "date": "2026-11-14",
+  "package": "com.rion0918.popreminder",
+  "featureName": "かたむけ声メモ",
+  "panoramaPair": ["upload/01-home.png", "upload/02-voice-memo.png"],
+  "assets": [
+    {
+      "order": 1,
+      "file": "upload/01-home.png",
+      "width": 1080,
+      "height": 1920,
+      "format": "PNG RGB 24-bit (no alpha)",
+      "headline": "忘れる前に、ふわっと残す。",
+      "alt": "数秒で残せるリマインダー。1枚目と2枚目にまたがる大きなスマートフォン画面で泡のホーム画面を表示（パノラマ左）",
+      "sha256": "e497ef874209a36c8cb228de6738a8725fe8328310798402bb079935a2516479",
+      "bytes": 1033258
+    },
+    {
+      "order": 2,
+      "file": "upload/02-voice-memo.png",
+      "width": 1080,
+      "height": 1920,
+      "format": "PNG RGB 24-bit (no alpha)",
+      "headline": "スマホを傾けて、ひとこと声メモ。",
+      "alt": "かたむけ声メモ。パノラマで繋がるスマートフォン画面に重なる音声入力案内カード（パノラマ右）",
+      "sha256": "1a919dd5353c73a1bc92e684aef95acb94def4b15af8d21a01bf042190526e29",
+      "bytes": 960796
+    },
+    {
+      "order": 3,
+      "file": "upload/03-quick-add.png",
+      "width": 1080,
+      "height": 1920,
+      "format": "PNG RGB 24-bit (no alpha)",
+      "headline": "思いついたら、すぐ予定に。",
+      "alt": "クイック追加。日付と時刻の候補をタップして選ぶ追加シート",
+      "sha256": "55fb1011c2e6ed21863904dd353a2f6832adc6b23e9567e8d1be217b7de78fab",
+      "bytes": 782488
+    },
+    {
+      "order": 4,
+      "file": "upload/04-notifications.png",
+      "width": 1080,
+      "height": 1920,
+      "format": "PNG RGB 24-bit (no alpha)",
+      "headline": "前日にも、予定の時間にも。",
+      "alt": "通知リマインド。前日と当日の2回に分けてお知らせする通知設定画面",
+      "sha256": "f3577df09990b44d93abf81b1b04d0a9e283ed9255d4927c91adddb176daf99b",
+      "bytes": 834721
+    },
+    {
+      "order": 5,
+      "file": "upload/05-widget.png",
+      "width": 1080,
+      "height": 1920,
+      "format": "PNG RGB 24-bit (no alpha)",
+      "headline": "アプリを開かず、さっと確認。",
+      "alt": "ホーム画面ウィジェット。次の予定確認も追加もホーム画面から行えるウィジェット表示",
+      "sha256": "3aad08b503d38b5280ac4ade993ae14fbbc6566b1b7806ff405560986fe11c02",
+      "bytes": 921517
+    },
+    {
+      "order": "feature",
+      "file": "upload/feature-graphic.png",
+      "width": 1024,
+      "height": 500,
+      "format": "PNG RGB 24-bit (no alpha)",
+      "headline": "忘れる前に、数秒だけ。",
+      "alt": "ふわっと。忘れる前に、数秒だけ。かたむけ声メモと泡で、予定をやさしく管理。",
+      "sha256": "021e8f912406cae100ede43e6fbd1c9b00eea32f90d4bdf0eebaba2026059ba5",
+      "bytes": 372271
+    }
+  ]
+}

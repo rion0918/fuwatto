@@ -13,7 +13,7 @@ Use the relevant section for setup, builds, verification, or implementation navi
 - Expo Go, for flows without the native behavior requiring a Development Build: `pnpm run start:expo-go`.
 - Local native builds: `pnpm run android` or `pnpm run ios`.
 - EAS development binary: `eas build --profile development --platform android` or `eas build --profile development --platform ios`.
-- Device QA: `docs/QA_DEVELOPMENT_BUILD.md`; release procedures: `docs/RELEASE_ANDROID_IOS.md`.
+- Device QA: `docs/QA_DEVELOPMENT_BUILD.md`; release procedures and AI version-bump criteria: `docs/RELEASE_ANDROID_IOS.md`.
 
 ## Verification and harness
 

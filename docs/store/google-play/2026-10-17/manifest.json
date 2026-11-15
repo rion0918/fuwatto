@@ -1,0 +1,76 @@
+{
+  "created": "2026-10-17",
+  "locale": "ja-JP",
+  "applicationId": "com.rion0918.popreminder",
+  "versionCode": 46,
+  "sourceCommit": "ca74a962d117d0f5e92ddaa3d64e70058da3a3ae",
+  "sourceAabSha256": "d342b12e6290692b9b643bbd98a5d72ed78dc3efeaf1c7c399d12ca248535a25",
+  "capture": "AAB universal APK re-signed with local debug certificate; isolated API 35 capture emulator; demo data; not purchase QA",
+  "published": false,
+  "assets": [
+    {
+      "file": "upload/01-home.png",
+      "width": 1080,
+      "height": 1920,
+      "mode": "RGB",
+      "alt": "泡で予定を確認",
+      "sha256": "eef81c54ce7912aecb67801e5f4356d56dc7dc794e65229d5078a5d025d0a400"
+    },
+    {
+      "file": "upload/02-quick-add.png",
+      "width": 1080,
+      "height": 1920,
+      "mode": "RGB",
+      "alt": "タイトル・日付・時刻を選ぶ",
+      "sha256": "961f7825a8c40d1cb7382a5b0141ec906dbb2ad263f341cb28bcfa120ae843ea"
+    },
+    {
+      "file": "upload/03-voice-input.png",
+      "width": 1080,
+      "height": 1920,
+      "mode": "RGB",
+      "alt": "左右に傾ける音声入力の案内",
+      "sha256": "69a3fcfc3691dc146b2f23469a109fca031809eca220ab090235bc88eb29cad9"
+    },
+    {
+      "file": "upload/04-notifications.png",
+      "width": 1080,
+      "height": 1920,
+      "mode": "RGB",
+      "alt": "前日と当日の通知設定",
+      "sha256": "74e15bb7808fdf3ce6f2e9f4c89f47c6b4d9455bdce3ae4b2cf6b25779b07816"
+    },
+    {
+      "file": "upload/05-widget.png",
+      "width": 1080,
+      "height": 1920,
+      "mode": "RGB",
+      "alt": "Widgetで次の予定を確認",
+      "sha256": "8d44b7b7694f37f016543d2e598ba237897aabd53d16858f671282a2cd651382"
+    },
+    {
+      "file": "upload/feature-graphic.png",
+      "width": 1024,
+      "height": 500,
+      "mode": "RGB",
+      "alt": "ふわっと。忘れる前に、数秒だけ。泡で見える、やさしいリマインダー。",
+      "sha256": "4b8aeea34fc35fe245198a3f30f04f5475766f219ce6b61c8ea96c75fd668dac"
+    }
+  ],
+  "playConsole": {
+    "locale": "ja-JP",
+    "status": "draft_saved",
+    "reviewSubmitted": false,
+    "productionAccessSubmitted": false,
+    "phoneOrder": [
+      "01-home.png",
+      "02-quick-add.png",
+      "03-voice-input.png",
+      "04-notifications.png",
+      "05-widget.png"
+    ],
+    "featureGraphic": "feature-graphic.png",
+    "altTextApplied": false,
+    "evidence": "console-draft-saved.png"
+  }
+}
