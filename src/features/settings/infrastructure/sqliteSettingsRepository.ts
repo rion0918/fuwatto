@@ -46,6 +46,7 @@ function toDomain(row: CurrentAppSettingsRow): AppSettings {
     notificationPermissionIntroSeen: row.notificationPermissionIntroSeen,
     raiseToSpeakEnabled: row.raiseToSpeakEnabled,
     raiseToSpeakIntroSeen: row.raiseToSpeakIntroSeen,
+    raiseToSpeakOnboardingCompleted: row.raiseToSpeakOnboardingCompleted,
     analyticsConsent: row.analyticsConsent,
     theme: coerceAppTheme(row.theme),
   };
@@ -65,6 +66,7 @@ async function get() {
       notificationPermissionIntroSeen: appSettings.notificationPermissionIntroSeen,
       raiseToSpeakEnabled: appSettings.raiseToSpeakEnabled,
       raiseToSpeakIntroSeen: appSettings.raiseToSpeakIntroSeen,
+      raiseToSpeakOnboardingCompleted: appSettings.raiseToSpeakOnboardingCompleted,
       analyticsConsent: appSettings.analyticsConsent,
       theme: appSettings.theme,
     })
@@ -112,6 +114,8 @@ export const sqliteSettingsRepository: SettingsRepository = {
         input.notificationPermissionIntroSeen ?? current.notificationPermissionIntroSeen,
       raiseToSpeakEnabled: input.raiseToSpeakEnabled ?? current.raiseToSpeakEnabled,
       raiseToSpeakIntroSeen: input.raiseToSpeakIntroSeen ?? current.raiseToSpeakIntroSeen,
+      raiseToSpeakOnboardingCompleted:
+        input.raiseToSpeakOnboardingCompleted ?? current.raiseToSpeakOnboardingCompleted,
       analyticsConsent: input.analyticsConsent ?? current.analyticsConsent,
       theme: input.theme ?? current.theme,
     };
@@ -128,6 +132,7 @@ export const sqliteSettingsRepository: SettingsRepository = {
         notificationPermissionIntroSeen: next.notificationPermissionIntroSeen,
         raiseToSpeakEnabled: next.raiseToSpeakEnabled,
         raiseToSpeakIntroSeen: next.raiseToSpeakIntroSeen,
+        raiseToSpeakOnboardingCompleted: next.raiseToSpeakOnboardingCompleted,
         analyticsConsent: next.analyticsConsent,
         theme: next.theme,
       })

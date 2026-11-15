@@ -111,6 +111,7 @@ function makeDependencies(events: string[]): ReminderApplicationDependencies {
         notificationPermissionIntroSeen: false,
         raiseToSpeakEnabled: false,
         raiseToSpeakIntroSeen: false,
+        raiseToSpeakOnboardingCompleted: false,
         analyticsConsent: 'unknown',
         theme: 'sky',
       }),
@@ -128,6 +129,7 @@ function makeDependencies(events: string[]): ReminderApplicationDependencies {
           notificationPermissionIntroSeen: false,
           raiseToSpeakEnabled: false,
           raiseToSpeakIntroSeen: false,
+          raiseToSpeakOnboardingCompleted: false,
           analyticsConsent: 'unknown',
           theme: 'sky',
         };
@@ -147,6 +149,7 @@ function makeDependencies(events: string[]): ReminderApplicationDependencies {
           notificationPermissionIntroSeen: false,
           raiseToSpeakEnabled: false,
           raiseToSpeakIntroSeen: false,
+          raiseToSpeakOnboardingCompleted: false,
           analyticsConsent: 'unknown',
           theme: 'sky',
         };
@@ -1600,6 +1603,7 @@ test('listVisible includes retained expired reminders only when auto-delete is d
     notificationPermissionIntroSeen: false,
     raiseToSpeakEnabled: false,
     raiseToSpeakIntroSeen: false,
+    raiseToSpeakOnboardingCompleted: false,
     analyticsConsent: 'unknown',
     theme: 'sky',
   });
@@ -1633,6 +1637,7 @@ test('cleanup retains expired reminders without cancelling notifications when au
     notificationPermissionIntroSeen: false,
     raiseToSpeakEnabled: false,
     raiseToSpeakIntroSeen: false,
+    raiseToSpeakOnboardingCompleted: false,
     analyticsConsent: 'unknown',
     theme: 'sky',
   });

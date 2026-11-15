@@ -12,6 +12,11 @@ test('raise-to-speak settings are explicit persisted booleans', async () => {
   assert.equal(module.DEFAULT_RAISE_TO_SPEAK_SETTINGS.raiseToSpeakEnabled, false);
   assert.equal(module.DEFAULT_RAISE_TO_SPEAK_SETTINGS.raiseToSpeakIntroSeen, false);
   assert.equal(
+    (module.DEFAULT_RAISE_TO_SPEAK_SETTINGS as { raiseToSpeakOnboardingCompleted: boolean })
+      .raiseToSpeakOnboardingCompleted,
+    false,
+  );
+  assert.equal(
     module.DEFAULT_NOTIFICATION_PERMISSION_SETTINGS.notificationPermissionIntroSeen,
     false,
   );
