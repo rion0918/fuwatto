@@ -9,20 +9,18 @@ import type {
   ReminderSingleNotificationScheduleResult,
 } from '../../features/reminders/application/ports';
 import type { Reminder } from '../../features/reminders/domain/reminder';
+import {
+  buildPreviousNotificationContent,
+  buildTargetNotificationContent,
+} from './reminderNotificationContent';
 
 type ReminderNotificationTarget = Pick<
   Reminder,
   'id' | 'title' | 'allDay' | 'previousNotifyAt' | 'targetNotifyAt'
 >;
 
-function buildTargetNotificationBody(reminder: Pick<Reminder, 'title' | 'allDay'>) {
-  return reminder.allDay
-    ? `今日の「${reminder.title}」をお知らせします`
-    : `「${reminder.title}」の時間をお知らせします`;
-}
-
-export const REMINDER_NOTIFICATION_CHANNEL_ID = 'reminder-alerts';
-const LEGACY_SILENT_REMINDER_NOTIFICATION_CHANNEL_ID = 'reminder-silent';
+export const REMINDER_NOTIFICATION_CHANNEL_ID = 'reminder-alerts-high';
+const LEGACY_REMINDER_NOTIFICATION_CHANNEL_IDS = new Set(['reminder-silent', 'reminder-alerts']);
 
 type ScheduleNotificationInput = {
   title: string;
@@ -41,6 +39,7 @@ export function configureNotificationHandler() {
         shouldShowList: true,
         shouldPlaySound: true,
         shouldSetBadge: false,
+        priority: Notifications.AndroidNotificationPriority.HIGH,
       } as Notifications.NotificationBehavior;
     },
   });
@@ -53,7 +52,7 @@ export async function configureAndroidNotificationChannels() {
 
   await Notifications.setNotificationChannelAsync(REMINDER_NOTIFICATION_CHANNEL_ID, {
     name: 'リマインダー',
-    importance: Notifications.AndroidImportance.DEFAULT,
+    importance: Notifications.AndroidImportance.HIGH,
     description: 'リマインダーのお知らせを届けます。音とバイブレーションは端末設定に従います',
     sound: 'default',
     enableVibrate: true,
@@ -110,6 +109,7 @@ async function scheduleIfFuture({
         title,
         body,
         sound: true,
+        priority: Notifications.AndroidNotificationPriority.HIGH,
         data: { reminderId },
       },
       trigger: {
@@ -133,6 +133,7 @@ async function scheduleIfFuture({
       title,
       body,
       sound: true,
+      priority: Notifications.AndroidNotificationPriority.HIGH,
       data: { reminderId },
     },
     trigger: {
@@ -195,8 +196,7 @@ export async function scheduleTargetReminderNotification(
 
   try {
     const notificationId = await scheduleIfFuture({
-      title: 'ふわっと。',
-      body: buildTargetNotificationBody(reminder),
+      ...buildTargetNotificationContent(reminder),
       date: targetDate,
       reminderId: reminder.id,
     });
@@ -225,8 +225,7 @@ export async function schedulePreviousReminderNotification(
 
   try {
     const notificationId = await scheduleIfFuture({
-      title: '前日のお知らせ',
-      body: `明日の「${reminder.title}」をふわっと残しています`,
+      ...buildPreviousNotificationContent(reminder),
       date: previousDate,
       reminderId: reminder.id,
     });
@@ -256,8 +255,7 @@ export async function scheduleReminderNotifications(
   let targetNotificationId: string | null;
   try {
     targetNotificationId = await scheduleIfFuture({
-      title: 'ふわっと。',
-      body: buildTargetNotificationBody(reminder),
+      ...buildTargetNotificationContent(reminder),
       date: targetDate,
       reminderId: reminder.id,
     });
@@ -273,8 +271,7 @@ export async function scheduleReminderNotifications(
   let previousNotificationId: string | null;
   try {
     previousNotificationId = await scheduleIfFuture({
-      title: '前日のお知らせ',
-      body: `明日の「${reminder.title}」をふわっと残しています`,
+      ...buildPreviousNotificationContent(reminder),
       date: new Date(reminder.previousNotifyAt),
       reminderId: reminder.id,
     });
@@ -294,7 +291,7 @@ export async function scheduleReminderNotifications(
 }
 
 export async function scheduleTestReminderNotifications(
-  reminder: Pick<Reminder, 'id' | 'title'>,
+  reminder: Pick<Reminder, 'id' | 'title'> & Partial<Pick<Reminder, 'allDay' | 'targetNotifyAt'>>,
   options: ReminderNotificationScheduleOptions = {},
 ): Promise<ReminderNotificationScheduleResult> {
   if (!__DEV__) {
@@ -306,11 +303,16 @@ export async function scheduleTestReminderNotifications(
     return notScheduled(blockReason);
   }
 
+  const displayReminder = {
+    title: reminder.title,
+    allDay: reminder.allDay ?? false,
+    targetNotifyAt: reminder.targetNotifyAt ?? new Date().toISOString(),
+  };
+
   let targetNotificationId: string | null;
   try {
     targetNotificationId = await scheduleIfFuture({
-      title: '通知テスト 当日',
-      body: `「${reminder.title}」の当日通知テストです`,
+      ...buildTargetNotificationContent(displayReminder),
       seconds: 20,
       reminderId: reminder.id,
     });
@@ -325,8 +327,7 @@ export async function scheduleTestReminderNotifications(
 
   try {
     const previousNotificationId = await scheduleIfFuture({
-      title: '通知テスト 前日',
-      body: `「${reminder.title}」の前日通知テストです`,
+      ...buildPreviousNotificationContent(displayReminder),
       seconds: 10,
       reminderId: reminder.id,
     });
@@ -385,10 +386,23 @@ export async function getLegacyScheduledNotificationIds(
           trigger !== null &&
           typeof trigger === 'object' &&
           'channelId' in trigger &&
-          trigger.channelId === LEGACY_SILENT_REMINDER_NOTIFICATION_CHANNEL_ID
+          typeof trigger.channelId === 'string' &&
+          LEGACY_REMINDER_NOTIFICATION_CHANNEL_IDS.has(trigger.channelId)
         );
       })
       .map((notification) => notification.identifier),
+  );
+}
+
+export async function deleteLegacyAndroidNotificationChannels() {
+  if (Platform.OS !== 'android') {
+    return;
+  }
+
+  await Promise.all(
+    [...LEGACY_REMINDER_NOTIFICATION_CHANNEL_IDS].map((channelId) =>
+      Notifications.deleteNotificationChannelAsync(channelId),
+    ),
   );
 }
 
@@ -398,6 +412,7 @@ export const reminderNotificationGateway: ReminderNotificationGateway = {
   scheduleTarget: scheduleTargetReminderNotification,
   schedulePrevious: schedulePreviousReminderNotification,
   getLegacyScheduledNotificationIds,
+  deleteLegacyChannels: deleteLegacyAndroidNotificationChannels,
   cancel: cancelReminderNotifications,
   cancelOne: cancelScheduledReminderNotification,
 };
