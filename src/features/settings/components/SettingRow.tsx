@@ -26,18 +26,18 @@ export function SettingRow({
   const controlStyle = controlFlex ? { flex: controlFlex } : undefined;
   const label = (
     <>
-      <View className="h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[17px] bg-[#F2F7FE]">
-        <Ionicons name={icon} size={20} color={palette.muted} />
+      <View className="h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[17px] border border-app-line bg-app-cloud">
+        <Ionicons name={icon} size={18} color={palette.inkSecondary} />
       </View>
       <View className="min-w-[48px] flex-1">
         <Text
-          className="text-[14px] font-extrabold leading-[19px] text-app-ink"
+          className="text-[15px] font-bold leading-[22px] text-app-ink"
           style={{ includeFontPadding: false }}
         >
           {title}
         </Text>
         {caption ? (
-          <Text className="mt-[3px] text-[11px] font-semibold leading-[16px] text-app-muted">
+          <Text className="mt-[2px] text-[13px] font-medium leading-[19px] text-app-ink-secondary">
             {caption}
           </Text>
         ) : null}
@@ -46,19 +46,19 @@ export function SettingRow({
   );
 
   return (
-    <View className="min-h-[64px] flex-row items-center py-[10px]">
+    <View className="min-h-[58px] flex-row items-center py-[10px]">
       {onPress ? (
         <Pressable
           onPress={onPress}
           hitSlop={4}
-          className="-my-[10px] min-w-0 flex-1 flex-row items-center gap-[12px] py-[10px]"
+          className="-my-[10px] min-h-[48px] min-w-0 flex-1 flex-row items-center gap-[12px] py-[10px]"
           style={tapAreaStyle}
         >
           {label}
         </Pressable>
       ) : (
         <View
-          className="-my-[10px] min-w-0 flex-1 flex-row items-center gap-[12px] py-[10px]"
+          className="-my-[10px] min-h-[48px] min-w-0 flex-1 flex-row items-center gap-[12px] py-[10px]"
           style={tapAreaStyle}
         >
           {label}

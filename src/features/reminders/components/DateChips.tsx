@@ -59,13 +59,13 @@ export function DateChips({
               accessibilityRole="button"
               accessibilityState={{ selected: active }}
               onPress={() => onChange(chip.value)}
-              className={`h-[38px] min-w-0 flex-1 flex-row items-center justify-center gap-[4px] rounded-[14px] border ${
-                active ? 'border-app-sky-deep bg-app-sky-deep' : 'border-app-line bg-app-cloud'
+              className={`min-h-[48px] min-w-0 flex-1 flex-row items-center justify-center gap-[4px] rounded-[14px] border ${
+                active ? 'border-app-sky-deep bg-app-sky-deep' : 'border-app-line bg-app-white'
               }`}
               style={({ pressed }) => [pressed ? styles.pressedChip : null]}
             >
               <Text
-                className={`text-[13px] font-extrabold ${
+                className={`text-[14px] font-semibold ${
                   active ? 'text-app-white' : 'text-app-ink'
                 }`}
               >
@@ -83,13 +83,13 @@ export function DateChips({
               formatLocalDate(getReminderDatePresetTarget(weekendChip.preset)),
             )
           }
-          className={`h-[38px] min-w-0 flex-1 flex-row items-center justify-center gap-[4px] rounded-[14px] border ${
-            weekendActive ? 'border-app-sky-deep bg-app-sky-deep' : 'border-app-line bg-app-cloud'
+          className={`min-h-[48px] min-w-0 flex-1 flex-row items-center justify-center gap-[4px] rounded-[14px] border ${
+            weekendActive ? 'border-app-sky-deep bg-app-sky-deep' : 'border-app-line bg-app-white'
           }`}
           style={({ pressed }) => [pressed ? styles.pressedChip : null]}
         >
           <Text
-            className={`text-[13px] font-extrabold ${
+            className={`text-[14px] font-semibold ${
               weekendActive ? 'text-app-white' : 'text-app-ink'
             }`}
           >
@@ -101,20 +101,20 @@ export function DateChips({
           accessibilityRole="button"
           accessibilityState={{ selected: customActive }}
           onPress={onSelectCustomDate}
-          className={`h-[38px] min-w-0 flex-row items-center justify-center gap-[4px] rounded-[14px] border px-[8px] ${
-            customActive ? 'border-app-sky-deep bg-app-sky-deep' : 'border-app-line bg-app-cloud'
+          className={`min-h-[48px] min-w-0 flex-row items-center justify-center gap-[4px] rounded-[14px] border px-[8px] ${
+            customActive ? 'border-app-sky-deep bg-app-sky-deep' : 'border-app-line bg-app-white'
           }`}
           style={({ pressed }) => [styles.selectChip, pressed ? styles.pressedChip : null]}
         >
           <Ionicons
             name="calendar-outline"
-            size={14}
+            size={15}
             color={customActive ? palette.white : palette.ink}
           />
           <Text
             adjustsFontSizeToFit
             numberOfLines={1}
-            className={`text-[13px] font-extrabold ${
+            className={`text-[14px] font-semibold ${
               customActive ? 'text-app-white' : 'text-app-ink'
             }`}
           >

@@ -139,7 +139,9 @@ const styles = StyleSheet.create({
     maxWidth: 420,
     maxHeight: '100%',
     overflow: 'hidden',
-    borderRadius: 28,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: palette.line,
     backgroundColor: palette.white,
   },
   consentScroll: {
@@ -151,13 +153,15 @@ const styles = StyleSheet.create({
   consentTitle: {
     color: palette.ink,
     fontSize: 20,
-    fontWeight: '800',
+    lineHeight: 28,
+    fontWeight: '700',
   },
   consentBody: {
     marginTop: 12,
-    color: palette.muted,
-    fontSize: 14,
-    lineHeight: 21,
+    color: palette.inkSecondary,
+    fontSize: 15,
+    lineHeight: 23,
+    fontWeight: '400',
   },
   consentActions: {
     flexDirection: 'row',
@@ -166,27 +170,31 @@ const styles = StyleSheet.create({
   },
   consentButton: {
     flex: 1,
+    minHeight: 52,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 18,
-    paddingHorizontal: 10,
+    borderRadius: 16,
+    paddingHorizontal: 12,
     paddingVertical: 13,
   },
   consentButtonSecondary: {
     borderWidth: 1,
-    borderColor: '#DDE7F4',
+    borderColor: palette.line,
+    backgroundColor: palette.cloud,
   },
   consentButtonPrimary: {
-    backgroundColor: palette.ink,
+    backgroundColor: palette.skyDeep,
   },
   consentButtonSecondaryLabel: {
     color: palette.ink,
-    fontWeight: '800',
+    fontSize: 15,
+    fontWeight: '600',
     textAlign: 'center',
   },
   consentButtonPrimaryLabel: {
     color: palette.white,
-    fontWeight: '800',
+    fontSize: 15,
+    fontWeight: '700',
     textAlign: 'center',
   },
 });

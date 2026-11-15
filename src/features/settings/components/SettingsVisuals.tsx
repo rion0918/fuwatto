@@ -77,7 +77,10 @@ export function SettingsThemePicker({
               <View
                 style={[
                   styles.selection,
-                  { backgroundColor: active ? colors.accent : palette.white },
+                  {
+                    backgroundColor: active ? colors.accent : palette.white,
+                    borderColor: active ? colors.accent : palette.line,
+                  },
                 ]}
               >
                 {active ? <Ionicons name="checkmark" size={13} color={palette.white} /> : null}
@@ -116,13 +119,13 @@ export function SettingsTimeTile({
       style={[styles.timeTile, { backgroundColor: background }]}
     >
       <View style={styles.tileHeader}>
-        <Ionicons name={icon} size={28} color={color} />
-        <Text style={[styles.label, { color }]}>{label}</Text>
+        <View style={styles.tileLabelGroup}>
+          <Ionicons name={icon} size={20} color={color} />
+          <Text style={styles.label}>{label}</Text>
+        </View>
+        <Ionicons name="create-outline" size={16} color={palette.inkSecondary} />
       </View>
-      <View style={styles.tileValue}>
-        <Text style={styles.time}>{value}</Text>
-        <Ionicons name="create-outline" size={16} color={palette.muted} />
-      </View>
+      <Text style={styles.time}>{value}</Text>
     </Pressable>
   );
 }
@@ -148,8 +151,8 @@ export function SettingsNotificationTimeline({
         className="active:opacity-75"
         style={styles.previousDay}
       >
-        <View style={styles.tileHeader}>
-          <Ionicons name="notifications-outline" size={20} color={palette.lavenderDeep} />
+        <View style={styles.tileLabelGroup}>
+          <Ionicons name="notifications-outline" size={18} color={palette.lavenderDeep} />
           <Text style={styles.label}>前日</Text>
         </View>
         {pending ? (
@@ -158,12 +161,12 @@ export function SettingsNotificationTimeline({
           <Text style={styles.time}>{value}</Text>
         )}
         <Text style={styles.hint}>
-          お知らせ <Ionicons name="create-outline" size={12} />
+          お知らせ <Ionicons name="create-outline" size={12} color={palette.inkSecondary} />
         </Text>
       </Pressable>
-      <Ionicons name="arrow-forward" size={20} color={palette.muted} />
+      <Ionicons name="arrow-forward" size={18} color={palette.inkSecondary} />
       <View style={styles.currentDay}>
-        <Ionicons name="calendar-outline" size={26} color={palette.muted} />
+        <Ionicons name="calendar-outline" size={24} color={palette.inkSecondary} />
         <Text style={styles.label}>当日</Text>
         <Text style={styles.hint}>予定の日時</Text>
       </View>
@@ -179,20 +182,20 @@ export function SettingsAutoDeletePreview({ enabled }: { enabled: boolean }) {
         accessibilityLabel={enabled ? '予定日を過ぎると泡を削除' : '予定日を過ぎても泡を保持'}
       >
         <View style={styles.step}>
-          <PreviewBubble color={appThemes.lavender.accentSoft} />
+          <PreviewBubble color={appThemes.lavender.accentSoft} size={34} />
           <Text style={styles.hint}>予定日</Text>
         </View>
         <View style={styles.step}>
-          <Ionicons name="arrow-forward" size={20} color={palette.muted} />
+          <Ionicons name="arrow-forward" size={18} color={palette.inkSecondary} />
           <Text style={styles.hint}>日付が変わる</Text>
         </View>
         <View style={styles.step}>
           {enabled ? (
             <View style={styles.emptyBubble}>
-              <Ionicons name="sparkles-outline" size={20} color={palette.muted} />
+              <Ionicons name="sparkles-outline" size={18} color={palette.inkSecondary} />
             </View>
           ) : (
-            <PreviewBubble color={appThemes.lavender.accentSoft} />
+            <PreviewBubble color={appThemes.lavender.accentSoft} size={34} />
           )}
           <Text style={styles.hint}>{enabled ? '泡が消える' : '泡を残す'}</Text>
         </View>
@@ -210,17 +213,21 @@ export function SettingsVoicePreview({ enabled }: { enabled: boolean }) {
         importantForAccessibility="no-hide-descendants"
         accessibilityElementsHidden
       >
-        <View style={{ transform: [{ rotate: '-22deg' }] }}>
-          <Ionicons name="phone-portrait-outline" size={36} color={palette.lavenderDeep} />
+        <View style={{ transform: [{ rotate: '-20deg' }] }}>
+          <Ionicons name="phone-portrait-outline" size={22} color={palette.lavenderDeep} />
         </View>
-        <Ionicons name="swap-horizontal" size={20} color={palette.muted} />
-        <View style={{ transform: [{ rotate: '22deg' }] }}>
-          <Ionicons name="phone-portrait-outline" size={36} color={palette.lavenderDeep} />
+        <Ionicons name="swap-horizontal" size={16} color={palette.inkSecondary} />
+        <View style={{ transform: [{ rotate: '20deg' }] }}>
+          <Ionicons name="phone-portrait-outline" size={22} color={palette.lavenderDeep} />
         </View>
       </View>
       <View style={styles.voiceLabel}>
-        <Ionicons name={enabled ? 'mic' : 'mic-outline'} size={22} color={palette.lavenderDeep} />
-        <Text style={styles.label}>{enabled ? '傾けて話す' : '傾けて音声入力'}</Text>
+        <Ionicons
+          name={enabled ? 'mic' : 'mic-outline'}
+          size={18}
+          color={enabled ? palette.mintDeep : palette.inkSecondary}
+        />
+        <Text style={styles.voiceText}>{enabled ? '傾けて話す' : '傾けて音声入力'}</Text>
       </View>
     </View>
   );
@@ -232,30 +239,37 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     padding: 16,
     borderRadius: 24,
-    backgroundColor: 'rgba(255,255,255,0.82)',
+    backgroundColor: palette.white,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.9)',
+    borderColor: palette.line,
   },
-  heading: { fontSize: 15, fontWeight: '800', color: palette.ink, marginBottom: 14 },
+  heading: {
+    fontSize: 16,
+    lineHeight: 24,
+    fontWeight: '700',
+    color: palette.ink,
+    marginBottom: 14,
+  },
   themeGrid: { flexDirection: 'row', gap: 8 },
   themeChoice: {
     flex: 1,
     minWidth: 0,
     borderWidth: 2,
     borderRadius: 18,
-    padding: 3,
+    padding: 4,
     backgroundColor: palette.white,
   },
-  scene: { height: 94, borderRadius: 13, overflow: 'hidden' },
-  largeBubble: { position: 'absolute', top: 26, left: 5 },
-  smallBubble: { position: 'absolute', top: 14, right: 3 },
+  scene: { height: 88, borderRadius: 13, overflow: 'hidden' },
+  largeBubble: { position: 'absolute', top: 24, left: 5 },
+  smallBubble: { position: 'absolute', top: 12, right: 3 },
   selection: {
     position: 'absolute',
-    right: 5,
-    bottom: 5,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    right: 6,
+    bottom: 6,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -268,68 +282,98 @@ const styles = StyleSheet.create({
     marginLeft: '18%',
     transform: [{ rotate: '-35deg' }],
   },
-  themeLabel: { fontSize: 12, fontWeight: '800', textAlign: 'center', paddingVertical: 9 },
+  themeLabel: { fontSize: 13, fontWeight: '700', textAlign: 'center', paddingVertical: 8 },
   timeTile: {
     flexGrow: 1,
     flexBasis: '45%',
     minWidth: 0,
     padding: 14,
-    borderRadius: 20,
-    minHeight: 100,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: palette.line,
+    minHeight: 88,
+    justifyContent: 'space-between',
+    gap: 8,
   },
-  tileHeader: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8 },
-  tileValue: {
+  tileHeader: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 4,
-    marginTop: 9,
+    gap: 8,
   },
-  label: { fontSize: 13, fontWeight: '700', color: palette.ink, flexShrink: 1 },
-  time: { fontSize: 25, fontWeight: '800', color: palette.ink, fontVariant: ['tabular-nums'] },
-  hint: { fontSize: 11, fontWeight: '600', color: palette.muted, textAlign: 'center' },
-  timeline: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 },
+  tileLabelGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexShrink: 1,
+  },
+  label: { fontSize: 14, fontWeight: '700', color: palette.ink, flexShrink: 1 },
+  time: {
+    fontSize: 22,
+    lineHeight: 28,
+    fontWeight: '700',
+    color: palette.ink,
+    fontVariant: ['tabular-nums'],
+  },
+  hint: { fontSize: 12, fontWeight: '600', color: palette.inkSecondary, textAlign: 'center' },
+  timeline: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
   previousDay: {
     flex: 1,
-    minHeight: 112,
+    minHeight: 98,
     borderRadius: 18,
-    backgroundColor: appThemes.lavender.background,
-    borderColor: appThemes.lavender.accentSoft,
+    backgroundColor: palette.cloud,
+    borderColor: palette.line,
     borderWidth: 1,
     padding: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 5,
+    gap: 4,
   },
-  currentDay: { flex: 1, alignItems: 'center', gap: 8 },
+  currentDay: { flex: 1, alignItems: 'center', gap: 6 },
   illustration: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: 12,
+    paddingHorizontal: 10,
+    borderRadius: 16,
+    backgroundColor: palette.cloud,
+    borderWidth: 1,
+    borderColor: palette.line,
     gap: 6,
   },
-  step: { flex: 1, alignItems: 'center', gap: 10 },
+  step: { flex: 1, alignItems: 'center', gap: 8 },
   emptyBubble: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     borderWidth: 1,
     borderStyle: 'dashed',
-    borderColor: palette.muted,
+    borderColor: palette.controlLine,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  caption: { color: palette.muted, fontSize: 12, lineHeight: 19, marginTop: 4, marginBottom: 12 },
-  voicePreview: {
-    backgroundColor: appThemes.lavender.background,
-    borderRadius: 18,
-    padding: 16,
-    alignItems: 'center',
-    gap: 14,
+  caption: {
+    color: palette.inkSecondary,
+    fontSize: 13,
+    lineHeight: 19,
     marginTop: 8,
+    marginBottom: 10,
   },
-  phones: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  voiceLabel: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  voicePreview: {
+    backgroundColor: palette.cloud,
+    borderWidth: 1,
+    borderColor: palette.line,
+    borderRadius: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 14,
+    marginTop: 6,
+  },
+  phones: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  voiceLabel: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  voiceText: { fontSize: 13, fontWeight: '600', color: palette.inkSecondary },
 });

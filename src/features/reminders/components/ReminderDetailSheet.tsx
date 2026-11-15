@@ -1,14 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ComponentProps } from 'react';
-import {
-  Alert,
-  ImageBackground,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-  useWindowDimensions,
-} from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { BottomSheetBackdrop, BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -47,7 +39,6 @@ type ReminderDetailSheetProps = {
 const DETAIL_SHEET_BOTTOM_CLEARANCE = 24;
 const DETAIL_SHEET_MIN_DYNAMIC_CONTENT_SIZE = 320;
 const DETAIL_SHEET_BASE_BOTTOM_PADDING = 28;
-const reminderDetailBubbles = require('../../../../assets/reminder-detail-bubbles.png');
 
 type NotificationTimelineProps = {
   reminder: Reminder;
@@ -87,12 +78,7 @@ function NotificationTimeline({
           isScheduleEditingDisabled ? styles.targetScheduleCardDisabled : null,
         ]}
       >
-        <ImageBackground
-          source={reminderDetailBubbles}
-          resizeMode="cover"
-          style={styles.targetScheduleBackground}
-          imageStyle={styles.targetScheduleBackgroundImage}
-        >
+        <View style={styles.targetScheduleBody}>
           <View style={styles.targetScheduleHeader}>
             <View style={styles.targetScheduleIcon}>
               <Ionicons name="notifications-outline" size={24} color={palette.lavenderDeep} />
@@ -108,7 +94,7 @@ function NotificationTimeline({
           <View style={styles.targetTimeHint}>
             <Text style={styles.targetTimeHintText}>タップして日時を変更</Text>
           </View>
-        </ImageBackground>
+        </View>
       </Pressable>
 
       {shouldDisplayPreviousNotification ? (
@@ -121,7 +107,7 @@ function NotificationTimeline({
             style={styles.previousScheduleRow}
           >
             <View style={styles.previousScheduleIcon}>
-              <Ionicons name="notifications-outline" size={19} color={palette.muted} />
+              <Ionicons name="notifications-outline" size={19} color={palette.inkSecondary} />
             </View>
             <View style={styles.previousScheduleContent}>
               <View style={styles.previousScheduleLabelRow}>
@@ -471,6 +457,7 @@ export function ReminderDetailSheet({
                 <ImeSafeReminderTitleInput
                   ref={titleInputRef}
                   accessibilityLabel="リマインダーのタイトル"
+                  label="タイトル"
                   initialValue={draftTitleRef.current}
                   onTextChange={handleTitleTextChange}
                   onEndEditing={handleTitleEndEditing}
@@ -530,7 +517,7 @@ export function ReminderDetailSheet({
               ]}
             >
               <View style={styles.deleteActionContent}>
-                <Ionicons name="trash-outline" size={19} color={palette.peachDeep} />
+                <Ionicons name="trash-outline" size={19} color={palette.dangerText} />
                 <Text style={styles.deleteActionText}>削除する</Text>
               </View>
             </Pressable>
@@ -554,7 +541,7 @@ export function ReminderDetailSheet({
 
 const styles = StyleSheet.create({
   sheetBackground: {
-    backgroundColor: 'rgba(255,255,255,0.98)',
+    backgroundColor: palette.white,
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
   },
@@ -578,19 +565,20 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   kicker: {
-    color: palette.muted,
+    color: palette.inkSecondary,
     fontSize: 13,
-    fontWeight: '800',
-    marginBottom: 8,
+    lineHeight: 18,
+    fontWeight: '600',
+    marginBottom: 6,
   },
   title: {
     color: palette.ink,
-    fontSize: 30,
-    lineHeight: 36,
-    fontWeight: '900',
+    fontSize: 24,
+    lineHeight: 32,
+    fontWeight: '700',
   },
   titlePressable: {
-    minHeight: 44,
+    minHeight: 48,
     justifyContent: 'center',
   },
   titlePressablePressed: {
@@ -598,29 +586,32 @@ const styles = StyleSheet.create({
   },
   titleNotice: {
     marginTop: 4,
-    color: palette.peachDeep,
-    fontSize: 12,
-    fontWeight: '700',
+    color: palette.dangerText,
+    fontSize: 13,
+    lineHeight: 19,
+    fontWeight: '600',
   },
   closeButton: {
     width: 48,
     height: 48,
     borderRadius: 24,
+    borderWidth: 1,
+    borderColor: palette.line,
     flexShrink: 0,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F3F6FC',
+    backgroundColor: palette.cloud,
   },
   scheduleSection: {
     width: '100%',
   },
   targetScheduleCard: {
-    minHeight: 188,
+    minHeight: 180,
     overflow: 'hidden',
-    borderRadius: 26,
+    borderRadius: 24,
     borderWidth: 1,
-    borderColor: 'rgba(211,213,251,0.72)',
-    backgroundColor: palette.lavender,
+    borderColor: palette.line,
+    backgroundColor: palette.cloud,
   },
   targetScheduleCardPressed: {
     opacity: 0.88,
@@ -629,14 +620,10 @@ const styles = StyleSheet.create({
   targetScheduleCardDisabled: {
     opacity: 0.5,
   },
-  targetScheduleBackground: {
-    minHeight: 188,
+  targetScheduleBody: {
+    minHeight: 180,
     paddingHorizontal: 18,
     paddingVertical: 18,
-  },
-  targetScheduleBackgroundImage: {
-    borderRadius: 25,
-    opacity: 0.64,
   },
   targetScheduleHeader: {
     flexDirection: 'row',
@@ -650,50 +637,50 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.84)',
-    backgroundColor: 'rgba(255,255,255,0.68)',
+    borderColor: palette.line,
+    backgroundColor: '#F3EEFF',
   },
   targetScheduleLabel: {
     minWidth: 0,
     flex: 1,
     color: palette.lavenderDeep,
-    fontSize: 15,
+    fontSize: 14,
     lineHeight: 20,
-    fontWeight: '900',
+    fontWeight: '700',
   },
   targetScheduleDate: {
     marginTop: 10,
     marginLeft: 56,
-    color: palette.lavenderDeep,
+    color: palette.inkSecondary,
     fontSize: 15,
-    lineHeight: 20,
-    fontWeight: '800',
+    lineHeight: 22,
+    fontWeight: '600',
   },
   targetScheduleTime: {
     marginTop: 2,
     marginLeft: 56,
     color: palette.ink,
-    fontSize: 42,
-    lineHeight: 48,
-    fontWeight: '900',
-    letterSpacing: -1,
+    fontSize: 38,
+    lineHeight: 44,
+    fontWeight: '700',
+    fontVariant: ['tabular-nums'],
   },
   targetTimeHint: {
     alignSelf: 'flex-start',
-    marginTop: 8,
+    marginTop: 10,
     marginLeft: 56,
     borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
     borderWidth: 1,
-    borderColor: 'rgba(151,132,214,0.18)',
-    backgroundColor: 'rgba(255,255,255,0.52)',
+    borderColor: palette.line,
+    backgroundColor: palette.white,
   },
   targetTimeHintText: {
-    color: palette.lavenderDeep,
-    fontSize: 11,
-    lineHeight: 15,
-    fontWeight: '800',
+    color: palette.ink,
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '600',
   },
   scheduleDivider: {
     height: 1,
@@ -702,7 +689,7 @@ const styles = StyleSheet.create({
     backgroundColor: palette.line,
   },
   previousScheduleRow: {
-    minHeight: 108,
+    minHeight: 104,
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 14,
@@ -727,32 +714,33 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   previousScheduleLabel: {
-    color: palette.muted,
-    fontSize: 15,
-    lineHeight: 20,
-    fontWeight: '800',
-  },
-  previousScheduleDate: {
-    marginTop: 10,
-    color: palette.muted,
+    color: palette.inkSecondary,
     fontSize: 14,
     lineHeight: 20,
-    fontWeight: '700',
+    fontWeight: '600',
+  },
+  previousScheduleDate: {
+    marginTop: 8,
+    color: palette.inkSecondary,
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: '500',
   },
   previousScheduleTime: {
     marginTop: 2,
     color: palette.ink,
-    fontSize: 28,
-    lineHeight: 34,
-    fontWeight: '900',
+    fontSize: 26,
+    lineHeight: 32,
+    fontWeight: '700',
+    fontVariant: ['tabular-nums'],
   },
   timeNotice: {
     marginTop: 8,
     paddingHorizontal: 6,
-    color: palette.peachDeep,
-    fontSize: 12,
-    lineHeight: 18,
-    fontWeight: '700',
+    color: palette.dangerText,
+    fontSize: 13,
+    lineHeight: 19,
+    fontWeight: '600',
   },
   deleteActionSpacer: {
     marginTop: 34,
@@ -762,8 +750,9 @@ const styles = StyleSheet.create({
     borderTopColor: palette.line,
   },
   deleteAction: {
-    minWidth: 124,
-    minHeight: 44,
+    minWidth: 132,
+    minHeight: 48,
+    paddingHorizontal: 16,
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
@@ -774,13 +763,13 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   deleteActionText: {
-    color: palette.peachDeep,
+    color: palette.dangerText,
     fontSize: 16,
-    fontWeight: '800',
+    fontWeight: '700',
   },
   deleteActionPressed: {
     transform: [{ scale: 0.98 }],
-    backgroundColor: 'rgba(255,228,184,0.46)',
+    backgroundColor: palette.dangerSoft,
   },
   deleteActionDisabled: {
     opacity: 0.42,

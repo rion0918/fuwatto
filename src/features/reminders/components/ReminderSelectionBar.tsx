@@ -16,7 +16,7 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 
-import { bubbleDueColors, palette } from '../../../constants/colors';
+import { palette } from '../../../constants/colors';
 
 type ReminderSelectionBarProps = {
   selectedCount: number;
@@ -116,9 +116,9 @@ export const ReminderSelectionBar = memo(function ReminderSelectionBar({
         >
           <View style={styles.deleteIconSlot}>
             {busy ? (
-              <ActivityIndicator size="small" color={bubbleDueColors.today.accent} />
+              <ActivityIndicator size="small" color={palette.dangerText} />
             ) : (
-              <Ionicons name="trash-outline" size={24} color={bubbleDueColors.today.accent} />
+              <Ionicons name="trash-outline" size={22} color={palette.dangerText} />
             )}
           </View>
         </Pressable>
@@ -132,21 +132,23 @@ const styles = StyleSheet.create({
     minHeight: 64,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    padding: 4,
-    borderRadius: 32,
+    gap: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 24,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.94)',
-    backgroundColor: 'rgba(255,255,255,0.86)',
+    borderColor: palette.line,
+    backgroundColor: palette.white,
     shadowColor: palette.ink,
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.14,
-    shadowRadius: 20,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
+    elevation: 4,
   },
   containerCompact: {
-    gap: 4,
-    padding: 4,
+    gap: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
   },
   selectionCount: {
     flex: 1,
@@ -160,9 +162,9 @@ const styles = StyleSheet.create({
   },
   selectionCountText: {
     color: palette.ink,
-    fontSize: 12,
-    lineHeight: 16,
-    fontWeight: '900',
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: '700',
     textAlign: 'left',
   },
   actionGroup: {
@@ -175,28 +177,30 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   action: {
-    minHeight: 56,
-    borderRadius: 28,
+    minHeight: 48,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     overflow: 'hidden',
   },
   toggleAction: {
-    minWidth: 88,
-    backgroundColor: 'rgba(237,229,255,0.76)',
+    minWidth: 92,
+    borderWidth: 1,
+    borderColor: 'rgba(121,87,213,0.22)',
+    backgroundColor: palette.lavender,
   },
   toggleActionCompact: {
-    minWidth: 82,
-    paddingHorizontal: 7,
+    minWidth: 84,
+    paddingHorizontal: 10,
   },
   deleteAction: {
-    width: 56,
-    height: 56,
+    width: 48,
+    height: 48,
     paddingHorizontal: 0,
     borderWidth: 1,
-    borderColor: bubbleDueColors.today.border,
-    backgroundColor: 'rgba(248,113,113,0.14)',
+    borderColor: 'rgba(180,52,68,0.45)',
+    backgroundColor: palette.dangerSoft,
   },
   deleteIconSlot: {
     width: 28,
@@ -213,9 +217,9 @@ const styles = StyleSheet.create({
     opacity: 0.42,
   },
   toggleLabel: {
-    color: palette.lavenderDeep,
-    fontSize: 12,
-    lineHeight: 16,
-    fontWeight: '900',
+    color: palette.ink,
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '700',
   },
 });

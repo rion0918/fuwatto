@@ -8,7 +8,6 @@ import {
   AppState,
   BackHandler,
   Image,
-  ImageBackground,
   Linking,
   Platform,
   Pressable,
@@ -57,7 +56,6 @@ import {
 } from '../hooks/useRaiseToSpeakGesture';
 
 const appIcon = require('../../../../assets/app-icon.png');
-const reminderDetailBubbles = require('../../../../assets/reminder-detail-bubbles.png');
 const HOME_ADD_BUTTON_SIZE = 64;
 const HOME_BOTTOM_CONTROLS_OFFSET = 28;
 const HOME_BUBBLE_CONTROLS_GAP = 12;
@@ -1127,7 +1125,7 @@ export function HomeScreen() {
               numberOfLines={1}
               adjustsFontSizeToFit
               minimumFontScale={0.72}
-              className="text-[30px] font-extrabold text-app-ink"
+              className="text-[28px] font-bold text-app-ink"
             >
               ふわっと。
             </Text>
@@ -1135,7 +1133,7 @@ export function HomeScreen() {
               numberOfLines={1}
               adjustsFontSizeToFit
               minimumFontScale={0.72}
-              className="mt-[2px] text-[13px] font-bold text-app-muted"
+              className="mt-[2px] text-[13px] font-medium text-app-ink-secondary"
             >
               忘れる前に、数秒だけ。
             </Text>
@@ -1147,9 +1145,9 @@ export function HomeScreen() {
             accessibilityLabel={isSelectionMode ? '選択モードを閉じる' : '設定を開く'}
             accessibilityState={{ disabled: isSelectionBusy }}
             disabled={isSelectionBusy}
-            hitSlop={8}
+            hitSlop={6}
             onPress={isSelectionMode ? cancelSelection : handlePressSettings}
-            className="h-[44px] w-[44px] items-center justify-center rounded-[22px] border border-[rgba(255,255,255,0.90)] bg-[rgba(255,255,255,0.78)]"
+            className="h-[48px] w-[48px] items-center justify-center rounded-[24px] border border-app-line bg-app-white"
             style={({ pressed }) => [pressed ? styles.iconButtonPressed : null]}
           >
             <Ionicons
@@ -1176,12 +1174,7 @@ export function HomeScreen() {
               pressed ? styles.nextReminderCardPressed : null,
             ]}
           >
-            <ImageBackground
-              source={reminderDetailBubbles}
-              resizeMode="cover"
-              style={styles.nextReminderBackground}
-              imageStyle={styles.nextReminderBackgroundImage}
-            >
+            <View style={styles.nextReminderBody}>
               <View style={styles.nextReminderIcon}>
                 <Ionicons name="notifications-outline" size={19} color={palette.lavenderDeep} />
               </View>
@@ -1196,7 +1189,7 @@ export function HomeScreen() {
               <Text numberOfLines={1} style={styles.nextReminderDateTime}>
                 {nextReminderLabel}
               </Text>
-            </ImageBackground>
+            </View>
           </Pressable>
         </View>
       ) : null}
@@ -1264,7 +1257,7 @@ export function HomeScreen() {
           <View
             accessibilityLabel="シャボン玉の色。今日、明日、2から3日後、4日以上先"
             accessibilityRole="text"
-            className="min-h-[52px] flex-row items-center justify-around gap-[6px] rounded-[26px] border border-[rgba(255,255,255,0.86)] bg-[rgba(255,255,255,0.66)] px-[12px]"
+            className="min-h-[54px] flex-row items-center justify-around gap-[6px] rounded-[24px] border border-app-line bg-app-white px-[12px]"
             style={[styles.dueLegend, isCompactPhoneWidth ? styles.dueLegendCompact : null]}
           >
             {dueLegendItems.map((item) => (
@@ -1284,7 +1277,7 @@ export function HomeScreen() {
                 />
                 <Text
                   numberOfLines={1}
-                  className="text-center text-[10px] font-black leading-[12px] text-app-muted"
+                  className="text-center text-[12px] font-semibold leading-[16px] text-app-ink"
                 >
                   {item.label}
                 </Text>
@@ -1381,8 +1374,13 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: 'rgba(211,213,251,0.72)',
-    backgroundColor: palette.lavender,
+    borderColor: palette.line,
+    backgroundColor: palette.white,
+    shadowColor: palette.ink,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 2,
   },
   nextReminderCardPressed: {
     opacity: 0.88,
@@ -1391,14 +1389,12 @@ const styles = StyleSheet.create({
   nextReminderCardInactive: {
     opacity: 0.62,
   },
-  nextReminderBackground: {
+  nextReminderBody: {
     minHeight: 68,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 14,
-  },
-  nextReminderBackgroundImage: {
-    borderRadius: 23,
+    paddingVertical: 10,
   },
   nextReminderIcon: {
     width: 40,
@@ -1408,8 +1404,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.84)',
-    backgroundColor: 'rgba(255,255,255,0.68)',
+    borderColor: palette.line,
+    backgroundColor: '#F3EEFF',
   },
   nextReminderContent: {
     minWidth: 0,
@@ -1419,23 +1415,24 @@ const styles = StyleSheet.create({
   },
   nextReminderKicker: {
     color: palette.lavenderDeep,
-    fontSize: 11,
-    lineHeight: 14,
-    fontWeight: '800',
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '600',
   },
   nextReminderTitle: {
     color: palette.ink,
     fontSize: 15,
-    lineHeight: 20,
-    fontWeight: '900',
+    lineHeight: 21,
+    fontWeight: '700',
   },
   nextReminderDateTime: {
     flexShrink: 0,
     marginLeft: 10,
-    color: palette.lavenderDeep,
-    fontSize: 12,
-    lineHeight: 16,
-    fontWeight: '800',
+    color: palette.inkSecondary,
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '600',
+    fontVariant: ['tabular-nums'],
     textAlign: 'right',
   },
   bubbleBoardContainer: {
@@ -1469,10 +1466,10 @@ const styles = StyleSheet.create({
   dueLegend: {
     flex: 1,
     minWidth: 0,
-    shadowColor: palette.shadow,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.08,
-    shadowRadius: 14,
+    shadowColor: palette.ink,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
     elevation: 1,
   },
   dueLegendCompact: {
@@ -1480,19 +1477,19 @@ const styles = StyleSheet.create({
   },
   dueLegendBubble: {
     shadowColor: palette.shadow,
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
-    shadowRadius: 8,
+    shadowRadius: 6,
   },
   addButton: {
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: addButtonVisualTokens.border,
-    shadowColor: palette.ink,
-    shadowOffset: { width: 0, height: 12 },
+    shadowColor: palette.shadow,
+    shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.24,
-    shadowRadius: 18,
-    elevation: 6,
+    shadowRadius: 14,
+    elevation: 4,
   },
   addButtonSurface: {
     width: '100%',
@@ -1507,6 +1504,6 @@ const styles = StyleSheet.create({
   addButtonPressed: {
     opacity: 0.9,
     transform: [{ translateY: 2 }, { scale: 0.97 }],
-    shadowOpacity: 0.16,
+    shadowOpacity: 0.12,
   },
 });
