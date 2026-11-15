@@ -450,8 +450,11 @@ export function createReminderUseCases(dependencies: ReminderApplicationDependen
           await notifications.deleteLegacyChannels?.();
         } catch (error) {
           console.warn('Failed to delete legacy notification channels', error);
+          migrationPending = true;
         }
-        await notificationChannelMigration.setVersion(CURRENT_NOTIFICATION_CHANNEL_VERSION);
+        if (!migrationPending) {
+          await notificationChannelMigration.setVersion(CURRENT_NOTIFICATION_CHANNEL_VERSION);
+        }
       }
     },
 

@@ -1642,6 +1642,42 @@ test('version 1 notification channels migrate to version 2 and clean up legacy c
   assert.equal(events.length, 4);
 });
 
+test('failed legacy channel cleanup remains pending for retry', async () => {
+  const events: string[] = [];
+  const dependencies = makeDependencies(events);
+  let version = 1;
+  dependencies.notificationChannelMigration = {
+    getVersion: async () => version,
+    setVersion: async (nextVersion) => {
+      version = nextVersion;
+      events.push(`notification-channel-version:${nextVersion}`);
+    },
+  };
+  dependencies.reminders.listActive = async () => [];
+  dependencies.notifications.getLegacyScheduledNotificationIds = async () => new Set();
+  let deleteAttempts = 0;
+  dependencies.notifications.deleteLegacyChannels = async () => {
+    deleteAttempts += 1;
+    events.push('delete-legacy-channels');
+    if (deleteAttempts === 1) {
+      throw new Error('channel deletion failed');
+    }
+  };
+
+  const useCases = createReminderUseCases(dependencies);
+  await useCases.migrateLegacyNotificationChannels();
+  assert.equal(version, 1);
+  assert.deepEqual(events, ['delete-legacy-channels']);
+
+  await useCases.migrateLegacyNotificationChannels();
+  assert.equal(version, 2);
+  assert.deepEqual(events, [
+    'delete-legacy-channels',
+    'delete-legacy-channels',
+    'notification-channel-version:2',
+  ]);
+});
+
 test('listVisible includes retained expired reminders only when auto-delete is disabled', async () => {
   const events: string[] = [];
   const dependencies = makeDependencies(events);
