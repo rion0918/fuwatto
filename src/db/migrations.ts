@@ -4,7 +4,7 @@ export type MigrationDatabase = {
   getAllAsync<T>(sql: string): Promise<T[]>;
 };
 
-const CURRENT_DATABASE_VERSION = 7;
+const CURRENT_DATABASE_VERSION = 8;
 
 async function repairCurrentSchema(database: MigrationDatabase) {
   let repaired = false;
@@ -34,6 +34,10 @@ async function repairCurrentSchema(database: MigrationDatabase) {
       'all_day_notify_time',
       "ALTER TABLE app_settings ADD COLUMN all_day_notify_time TEXT NOT NULL DEFAULT '09:00';",
     ],
+    [
+      'raise_to_speak_onboarding_completed',
+      'ALTER TABLE app_settings ADD COLUMN raise_to_speak_onboarding_completed INTEGER NOT NULL DEFAULT 0;',
+    ],
   ] as const;
 
   for (const [name, statement] of settingsRepairs) {
@@ -48,7 +52,8 @@ async function repairCurrentSchema(database: MigrationDatabase) {
 
 export async function runDatabaseMigrations(database: MigrationDatabase) {
   const result = await database.getFirstAsync<{ user_version: number }>('PRAGMA user_version');
-  let version = result?.user_version ?? 0;
+  const initialVersion = result?.user_version ?? 0;
+  let version = initialVersion;
   if (version >= CURRENT_DATABASE_VERSION) {
     const repaired = await repairCurrentSchema(database);
     if (!repaired) {
@@ -57,6 +62,11 @@ export async function runDatabaseMigrations(database: MigrationDatabase) {
     await database.execAsync(`PRAGMA user_version = ${CURRENT_DATABASE_VERSION};`);
     return;
   }
+
+  const initialSettingsColumns = await database.getAllAsync<{ name: string }>(
+    'PRAGMA table_info(app_settings)',
+  );
+  const isExistingDatabase = initialVersion >= 1 || initialSettingsColumns.length > 0;
 
   if (version < 1) {
     await database.execAsync(`
@@ -188,6 +198,23 @@ export async function runDatabaseMigrations(database: MigrationDatabase) {
     version = 7;
   }
 
+  if (version < 8) {
+    const settingsColumns = await database.getAllAsync<{ name: string }>(
+      'PRAGMA table_info(app_settings)',
+    );
+    if (!settingsColumns.some((column) => column.name === 'raise_to_speak_onboarding_completed')) {
+      await database.execAsync(
+        'ALTER TABLE app_settings ADD COLUMN raise_to_speak_onboarding_completed INTEGER NOT NULL DEFAULT 0;',
+      );
+    }
+    if (isExistingDatabase) {
+      await database.execAsync('UPDATE app_settings SET raise_to_speak_onboarding_completed = 1;');
+    }
+    await database.execAsync(`PRAGMA user_version = 8;`);
+    version = 8;
+  }
+
+  const onboardingCompletedValue = isExistingDatabase ? 1 : 0;
   await database.execAsync(`
     INSERT OR IGNORE INTO app_settings (
       id,
@@ -200,9 +227,10 @@ export async function runDatabaseMigrations(database: MigrationDatabase) {
       auto_delete_enabled,
       raise_to_speak_enabled,
       raise_to_speak_intro_seen,
+      raise_to_speak_onboarding_completed,
       analytics_consent,
       notification_channel_version,
       theme
-    ) VALUES ('default', '20:00', '09:00', '08:00', '12:00', '18:00', '20:00', 1, 0, 0, 'unknown', 0, 'lavender');
+    ) VALUES ('default', '20:00', '09:00', '08:00', '12:00', '18:00', '20:00', 1, 0, 0, ${onboardingCompletedValue}, 'unknown', 0, 'lavender');
   `);
 }

@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import {
   AccessibilityInfo,
   ActivityIndicator,
+  AppState,
   Modal,
   Pressable,
   ScrollView,
@@ -10,16 +11,20 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
   cancelAnimation,
+  Easing,
   useAnimatedStyle,
   useSharedValue,
+  withDelay,
   withSequence,
   withSpring,
+  withTiming,
 } from 'react-native-reanimated';
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 
-import { palette } from '../../../constants/colors';
+import { appThemes, bubbleColors, palette } from '../../../constants/colors';
 import type {
   RaiseToSpeakSensorFailureReason,
   RaiseToSpeakSensorStatus,
@@ -29,6 +34,7 @@ const ZERO_INSETS = { top: 0, right: 0, bottom: 0, left: 0 };
 const FALLBACK_SAFE_AREA_INSETS_CONTEXT = createContext(ZERO_INSETS);
 
 const TILT_PHONE_ROTATION_DEGREES = 9;
+const ONBOARDING_DEMO_TILT_DEGREES = 14;
 const CALIBRATION_POSE_TIMEOUT_MS = 10_000;
 const TILT_PHONE_SPRING = {
   damping: 16,
@@ -36,19 +42,33 @@ const TILT_PHONE_SPRING = {
   mass: 0.85,
   overshootClamping: false,
 } as const;
+const DEMO_WAVE_BARS = [
+  { id: 'wave-1', height: 16 },
+  { id: 'wave-2', height: 28 },
+  { id: 'wave-3', height: 22 },
+  { id: 'wave-4', height: 14 },
+] as const;
 const NOOP = () => {};
+
+export type RaiseToSpeakIntroMode = 'modal' | 'onboarding';
+export type RaiseToSpeakSetupFailureReason = 'permission-denied' | 'unavailable' | 'save-failed';
 
 type RaiseToSpeakIntroModalProps = {
   visible: boolean;
+  mode?: RaiseToSpeakIntroMode;
   busy: boolean;
   calibrating?: boolean;
   phase?: RaiseToSpeakCalibrationPhase;
   message: string | null;
+  setupFailureReason?: RaiseToSpeakSetupFailureReason | null;
+  permissionCanAskAgain?: boolean;
   sensorStatus: RaiseToSpeakSensorStatus;
   sensorFailureReason: RaiseToSpeakSensorFailureReason | null;
   tiltProgress: number | null;
   onEnable: () => void;
   onDismiss: () => void;
+  onSkip?: () => void;
+  onOpenSettings?: () => void;
   onRetry: () => void;
   onSuccessComplete?: () => void;
 };
@@ -148,20 +168,229 @@ function TiltPhoneIllustration({
   );
 }
 
+type OnboardingDemoIllustrationProps = {
+  active: boolean;
+  reduceMotionEnabled: boolean;
+  replayKey: number;
+};
+
+function OnboardingDemoIllustration({
+  active,
+  reduceMotionEnabled,
+  replayKey,
+}: OnboardingDemoIllustrationProps) {
+  const rotation = useSharedValue(0);
+  const waveProgress = useSharedValue(reduceMotionEnabled ? 1 : 0);
+  const bubbleProgress = useSharedValue(reduceMotionEnabled ? 1 : 0);
+  const bubbleTone = bubbleColors[0];
+
+  useEffect(() => {
+    cancelAnimation(rotation);
+    cancelAnimation(waveProgress);
+    cancelAnimation(bubbleProgress);
+
+    if (!active || reduceMotionEnabled) {
+      rotation.value = 0;
+      waveProgress.value = reduceMotionEnabled ? 0.85 : 0;
+      bubbleProgress.value = reduceMotionEnabled ? 1 : 0;
+      return;
+    }
+
+    const demoReplayNonce = replayKey;
+    void demoReplayNonce;
+
+    rotation.value = 0;
+    waveProgress.value = 0;
+    bubbleProgress.value = 0;
+
+    rotation.value = withSequence(
+      withDelay(
+        180,
+        withTiming(-ONBOARDING_DEMO_TILT_DEGREES, {
+          duration: 720,
+          easing: Easing.out(Easing.cubic),
+        }),
+      ),
+      withDelay(
+        1_300,
+        withTiming(0, {
+          duration: 680,
+          easing: Easing.out(Easing.cubic),
+        }),
+      ),
+    );
+
+    waveProgress.value = withSequence(
+      withDelay(880, withTiming(1, { duration: 360, easing: Easing.out(Easing.quad) })),
+      withDelay(950, withTiming(0.18, { duration: 320, easing: Easing.inOut(Easing.quad) })),
+    );
+
+    bubbleProgress.value = withDelay(
+      2_860,
+      withSpring(1, {
+        damping: 14,
+        stiffness: 110,
+        mass: 0.9,
+      }),
+    );
+
+    return () => {
+      cancelAnimation(rotation);
+      cancelAnimation(waveProgress);
+      cancelAnimation(bubbleProgress);
+    };
+  }, [active, bubbleProgress, reduceMotionEnabled, replayKey, rotation, waveProgress]);
+
+  const animatedPhoneStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${rotation.value}deg` }],
+  }));
+
+  const animatedWavesStyle = useAnimatedStyle(() => ({
+    opacity: 0.2 + waveProgress.value * 0.8,
+    transform: [{ scaleY: 0.45 + waveProgress.value * 0.55 }],
+  }));
+
+  const animatedBubbleStyle = useAnimatedStyle(() => ({
+    opacity: bubbleProgress.value,
+    transform: [
+      { scale: 0.68 + bubbleProgress.value * 0.32 },
+      { translateY: (1 - bubbleProgress.value) * 10 },
+    ],
+  }));
+
+  return (
+    <View
+      accessible
+      accessibilityRole="image"
+      accessibilityLabel="スマートフォンを傾けて話し、縦に戻すと丸いメモの泡になるデモ"
+      style={styles.onboardingDemoStage}
+    >
+      <View style={styles.onboardingDemoPhoneArea}>
+        <Ionicons
+          name="arrow-back-outline"
+          size={20}
+          color={palette.lavenderDeep}
+          style={styles.onboardingLeftArrow}
+        />
+        <Animated.View style={[styles.onboardingPhoneFrame, animatedPhoneStyle]}>
+          <View style={styles.phoneScreen}>
+            <View style={styles.phoneSpeaker} />
+            <View style={styles.phoneCamera} />
+            <View style={styles.phoneScreenContent}>
+              <Animated.View style={[styles.demoWaveRow, animatedWavesStyle]}>
+                {DEMO_WAVE_BARS.map((bar) => (
+                  <View
+                    key={bar.id}
+                    style={[styles.demoWaveBar, { height: Math.round(bar.height * 0.72) }]}
+                  />
+                ))}
+              </Animated.View>
+              <View style={styles.phoneScreenLineWide} />
+              <View style={styles.phoneScreenLine} />
+            </View>
+            <View style={styles.phoneHomeIndicator} />
+          </View>
+        </Animated.View>
+        <Ionicons
+          name="arrow-forward-outline"
+          size={20}
+          color={palette.lavenderDeep}
+          style={styles.onboardingRightArrow}
+        />
+      </View>
+
+      <Ionicons
+        name="arrow-forward"
+        size={18}
+        color={palette.lavenderDeep}
+        style={styles.onboardingStepArrow}
+      />
+
+      <Animated.View style={[styles.onboardingDemoBubbleWrap, animatedBubbleStyle]}>
+        <View
+          style={[
+            styles.onboardingMemoBubble,
+            {
+              borderColor: bubbleTone.border,
+              backgroundColor: bubbleTone.background,
+            },
+          ]}
+        >
+          <LinearGradient
+            colors={['rgba(255,255,255,0.88)', bubbleTone.gradient[1], 'rgba(255,255,255,0.22)']}
+            start={{ x: 0.2, y: 0 }}
+            end={{ x: 0.8, y: 1 }}
+            style={styles.onboardingMemoBubbleGradient}
+          >
+            <View style={styles.onboardingMemoGloss} />
+            <Text numberOfLines={1} style={styles.onboardingMemoTitle}>
+              牛乳を買う
+            </Text>
+            <Text numberOfLines={1} style={styles.onboardingMemoMeta}>
+              明日 8:00
+            </Text>
+          </LinearGradient>
+        </View>
+      </Animated.View>
+    </View>
+  );
+}
+
+function OnboardingSuccessIllustration() {
+  const bubbleTone = bubbleColors[0];
+  return (
+    <View
+      accessible
+      accessibilityRole="image"
+      accessibilityLabel="傾けてこえメモの準備ができました"
+      style={styles.onboardingSuccessStage}
+    >
+      <View
+        style={[
+          styles.onboardingSuccessBubble,
+          {
+            borderColor: bubbleTone.border,
+            backgroundColor: bubbleTone.background,
+          },
+        ]}
+      >
+        <LinearGradient
+          colors={['rgba(255,255,255,0.92)', bubbleTone.gradient[1], 'rgba(255,255,255,0.28)']}
+          start={{ x: 0.2, y: 0 }}
+          end={{ x: 0.8, y: 1 }}
+          style={styles.onboardingMemoBubbleGradient}
+        >
+          <View style={styles.onboardingMemoGloss} />
+          <Ionicons name="mic-outline" size={28} color={palette.lavenderDeep} />
+          <View style={styles.onboardingSuccessBadge}>
+            <Ionicons name="checkmark" size={16} color={palette.white} />
+          </View>
+        </LinearGradient>
+      </View>
+    </View>
+  );
+}
+
 export function RaiseToSpeakIntroModal({
   visible,
+  mode = 'modal',
   busy,
   calibrating,
   phase,
   message,
+  setupFailureReason = null,
+  permissionCanAskAgain = true,
   sensorStatus,
   sensorFailureReason,
   tiltProgress,
   onEnable,
   onDismiss,
+  onSkip,
+  onOpenSettings,
   onRetry,
   onSuccessComplete = NOOP,
 }: RaiseToSpeakIntroModalProps) {
+  const isOnboarding = mode === 'onboarding';
   const setupPhase = phase ?? (calibrating ? 'awaiting-tilt' : 'intro');
   const safeAreaInsets =
     useContext(SafeAreaInsetsContext ?? FALLBACK_SAFE_AREA_INSETS_CONTEXT) ?? ZERO_INSETS;
@@ -171,6 +400,7 @@ export function RaiseToSpeakIntroModal({
   const [reduceMotionEnabled, setReduceMotionEnabled] = useState(false);
   const [calibrationTimedOut, setCalibrationTimedOut] = useState(false);
   const [calibrationAttempt, setCalibrationAttempt] = useState(0);
+  const [demoReplayKey, setDemoReplayKey] = useState(0);
   const poseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -181,6 +411,23 @@ export function RaiseToSpeakIntroModal({
     );
     return () => subscription.remove();
   }, []);
+
+  useEffect(() => {
+    if (!visible || !isCalibrating) return undefined;
+
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      if (nextAppState === 'background') {
+        if (poseTimeoutRef.current !== null) {
+          clearTimeout(poseTimeoutRef.current);
+          poseTimeoutRef.current = null;
+        }
+        setCalibrationTimedOut(false);
+        setCalibrationAttempt((attempt) => attempt + 1);
+      }
+    });
+
+    return () => subscription.remove();
+  }, [isCalibrating, visible]);
 
   useEffect(() => {
     if (!visible || setupPhase !== 'awaiting-tilt') {
@@ -216,11 +463,11 @@ export function RaiseToSpeakIntroModal({
   }, [calibrationAttempt, sensorStatus, setupPhase, visible]);
 
   useEffect(() => {
-    if (!visible || setupPhase !== 'success') return;
+    if (!visible || setupPhase !== 'success' || isOnboarding) return;
 
     const timeout = setTimeout(onSuccessComplete, 1_000);
     return () => clearTimeout(timeout);
-  }, [onSuccessComplete, setupPhase, visible]);
+  }, [isOnboarding, onSuccessComplete, setupPhase, visible]);
 
   const handleRetry = () => {
     setCalibrationAttempt((attempt) => attempt + 1);
@@ -228,8 +475,12 @@ export function RaiseToSpeakIntroModal({
     onRetry();
   };
 
-  let title = '傾けて話す';
-  let body = 'スマホを左右どちらかへ傾けると音声入力を開始し、縦に戻すと終了します。';
+  const handleOnboardingSkip = onSkip ?? onDismiss;
+
+  let title = isOnboarding ? '傾けて、声でメモ' : '傾けて話す';
+  let body = isOnboarding
+    ? '左右に傾けて話す。縦に戻して、内容を確認。'
+    : 'スマホを左右どちらかへ傾けると音声入力を開始し、縦に戻すと終了します。';
 
   if (isCalibrating) {
     if (sensorStatus === 'unavailable') {
@@ -269,8 +520,10 @@ export function RaiseToSpeakIntroModal({
     title = '準備しています…';
     body = 'マイクとセンサーを確認しています。';
   } else if (setupPhase === 'success') {
-    title = '使い方を確認できました';
-    body = '傾けて開始、縦に戻して終了できます。';
+    title = isOnboarding ? '準備できました' : '使い方を確認できました';
+    body = isOnboarding
+      ? '傾けて話して縦に戻すだけで、文字と日時の候補を確認してから残せます。'
+      : '傾けて開始、縦に戻して終了できます。';
   }
 
   const calibrationFeedback =
@@ -289,6 +542,257 @@ export function RaiseToSpeakIntroModal({
       : null;
   const canRetry =
     setupPhase === 'awaiting-tilt' && (sensorStatus === 'unavailable' || calibrationTimedOut);
+
+  if (isOnboarding) {
+    const showPermissionSettingsAction =
+      setupPhase === 'intro' &&
+      setupFailureReason === 'permission-denied' &&
+      !permissionCanAskAgain &&
+      Boolean(onOpenSettings);
+    const isIntroPrepareRetry =
+      setupPhase === 'intro' &&
+      (setupFailureReason === 'permission-denied' || setupFailureReason === 'unavailable');
+
+    return (
+      <Modal
+        visible={visible}
+        transparent
+        statusBarTranslucent
+        navigationBarTranslucent
+        animationType={reduceMotionEnabled ? 'none' : 'fade'}
+        onRequestClose={isDismissLocked ? undefined : onDismiss}
+      >
+        <View
+          accessibilityViewIsModal
+          style={[
+            styles.onboardingSurface,
+            {
+              paddingTop: Math.max(20, safeAreaInsets.top + 14),
+              paddingBottom: Math.max(20, safeAreaInsets.bottom + 14),
+              paddingLeft: Math.max(20, safeAreaInsets.left + 16),
+              paddingRight: Math.max(20, safeAreaInsets.right + 16),
+            },
+          ]}
+        >
+          <View pointerEvents="none" style={styles.onboardingAmbientLayer}>
+            <View style={styles.onboardingAmbientTopRight} />
+            <View style={styles.onboardingAmbientMiddleLeft} />
+            <View style={styles.onboardingAmbientBottomRight} />
+          </View>
+
+          <ScrollView
+            bounces={false}
+            showsVerticalScrollIndicator={false}
+            style={styles.onboardingScroll}
+            contentContainerStyle={styles.onboardingScrollContent}
+          >
+            <View style={styles.onboardingInner}>
+              <View style={styles.onboardingBadge}>
+                <Ionicons name="sparkles-outline" size={14} color={palette.lavenderDeep} />
+                <Text style={styles.onboardingBadgeText}>傾けてこえメモ</Text>
+              </View>
+
+              {setupPhase === 'success' ? (
+                <OnboardingSuccessIllustration />
+              ) : setupPhase === 'intro' ? (
+                <View style={styles.onboardingDemoBlock}>
+                  <OnboardingDemoIllustration
+                    active={visible && setupPhase === 'intro'}
+                    reduceMotionEnabled={reduceMotionEnabled}
+                    replayKey={demoReplayKey}
+                  />
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="動きをもう一度見る"
+                    onPress={() => setDemoReplayKey((count) => count + 1)}
+                    className="active:opacity-70"
+                    style={styles.replayButton}
+                  >
+                    <Ionicons name="refresh-outline" size={15} color={palette.lavenderDeep} />
+                    <Text style={styles.replayButtonText}>動きをもう一度見る</Text>
+                  </Pressable>
+                </View>
+              ) : (
+                <View style={styles.onboardingCalibrationIllustrationWrap}>
+                  <TiltPhoneIllustration
+                    active={false}
+                    reduceMotionEnabled={reduceMotionEnabled}
+                    tiltProgress={isCalibrating ? tiltProgress : null}
+                    phase={setupPhase}
+                  />
+                </View>
+              )}
+
+              <Text accessibilityLiveRegion="polite" style={styles.onboardingTitle}>
+                {title}
+              </Text>
+              <Text accessibilityLiveRegion="polite" style={styles.onboardingBody}>
+                {body}
+              </Text>
+
+              {setupPhase === 'intro' ? (
+                <View style={styles.onboardingNoticeList}>
+                  <View style={styles.onboardingNoticeCard}>
+                    <Ionicons
+                      name="play-circle-outline"
+                      size={17}
+                      color={palette.lavenderDeep}
+                      style={styles.onboardingNoticeIcon}
+                    />
+                    <Text style={styles.onboardingNoticeText}>
+                      デモの音声やメモは保存されません。
+                    </Text>
+                  </View>
+                  <View style={styles.onboardingNoticeCard}>
+                    <Ionicons
+                      name="checkmark-circle-outline"
+                      size={17}
+                      color={palette.mintDeep}
+                      style={styles.onboardingNoticeIcon}
+                    />
+                    <Text style={styles.onboardingNoticeText}>
+                      日時と内容を確認してから保存できます。
+                    </Text>
+                  </View>
+                </View>
+              ) : null}
+
+              {isCalibrating ? (
+                <View style={styles.onboardingReassuranceBanner}>
+                  <Ionicons name="hand-left-outline" size={16} color={palette.lavenderDeep} />
+                  <Text style={styles.onboardingReassuranceText}>
+                    動きを練習します。声は出さなくて大丈夫です
+                  </Text>
+                </View>
+              ) : null}
+
+              {calibrationFeedback ? (
+                <Text accessibilityLiveRegion="polite" style={styles.onboardingFeedback}>
+                  {calibrationFeedback}
+                </Text>
+              ) : null}
+
+              {message ? (
+                <View accessibilityLiveRegion="polite" style={styles.onboardingErrorBanner}>
+                  <Text style={styles.onboardingErrorText}>{message}</Text>
+                </View>
+              ) : null}
+
+              <View style={styles.onboardingActions}>
+                {setupPhase === 'success' ? (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="はじめる"
+                    onPress={onSuccessComplete}
+                    className="active:opacity-70"
+                    style={styles.onboardingPrimaryButton}
+                  >
+                    <Text style={styles.onboardingPrimaryLabel}>はじめる</Text>
+                  </Pressable>
+                ) : isCalibrating || setupPhase === 'preparing' || setupPhase === 'saving' ? (
+                  <>
+                    {canRetry ? (
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel="傾きセンサーをもう一度試す"
+                        accessibilityState={{ disabled: isDismissLocked, busy }}
+                        disabled={isDismissLocked}
+                        onPress={handleRetry}
+                        className="active:opacity-70"
+                        style={styles.onboardingPrimaryButton}
+                      >
+                        <Text style={styles.onboardingPrimaryLabel}>もう一度試す</Text>
+                      </Pressable>
+                    ) : null}
+                    {canRetry ? (
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel="オフのままはじめる"
+                        disabled={isDismissLocked}
+                        onPress={handleOnboardingSkip}
+                        className="active:opacity-70"
+                        style={styles.onboardingSecondaryButton}
+                      >
+                        <Text style={styles.onboardingSecondaryLabel}>オフのままはじめる</Text>
+                      </Pressable>
+                    ) : null}
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel="左右に傾けて音声入力の設定をキャンセル"
+                      disabled={isDismissLocked}
+                      onPress={onDismiss}
+                      className="active:opacity-70"
+                      style={styles.onboardingSecondaryButton}
+                    >
+                      <Text style={styles.onboardingSecondaryLabel}>キャンセル</Text>
+                    </Pressable>
+                  </>
+                ) : (
+                  <>
+                    {showPermissionSettingsAction ? (
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel="端末の設定を開く"
+                        disabled={busy}
+                        onPress={onOpenSettings}
+                        className="active:opacity-70"
+                        style={styles.onboardingPrimaryButton}
+                      >
+                        <Text style={styles.onboardingPrimaryLabel}>端末の設定を開く</Text>
+                      </Pressable>
+                    ) : null}
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={isIntroPrepareRetry ? 'もう一度試す' : 'オンにして試す'}
+                      accessibilityState={{ disabled: busy, busy }}
+                      disabled={busy}
+                      onPress={onEnable}
+                      className="active:opacity-70"
+                      style={
+                        showPermissionSettingsAction
+                          ? styles.onboardingSecondaryButton
+                          : styles.onboardingPrimaryButton
+                      }
+                    >
+                      {busy ? (
+                        <ActivityIndicator
+                          size="small"
+                          color={
+                            showPermissionSettingsAction ? palette.lavenderDeep : palette.white
+                          }
+                        />
+                      ) : null}
+                      <Text
+                        style={
+                          showPermissionSettingsAction
+                            ? styles.onboardingSecondaryLabel
+                            : styles.onboardingPrimaryLabel
+                        }
+                      >
+                        {busy ? '確認中…' : isIntroPrepareRetry ? 'もう一度試す' : 'オンにして試す'}
+                      </Text>
+                    </Pressable>
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel="オフのままはじめる"
+                      disabled={busy}
+                      onPress={handleOnboardingSkip}
+                      className="active:opacity-70"
+                      style={styles.onboardingSecondaryButton}
+                    >
+                      <Text style={styles.onboardingSecondaryLabel}>オフのままはじめる</Text>
+                    </Pressable>
+                  </>
+                )}
+              </View>
+
+              <Text style={styles.onboardingFooter}>あとから設定で変更できます</Text>
+            </View>
+          </ScrollView>
+        </View>
+      </Modal>
+    );
+  }
 
   return (
     <Modal
@@ -425,6 +929,374 @@ const styles = StyleSheet.create({
   cardContent: {
     alignItems: 'center',
     padding: 22,
+  },
+  onboardingSurface: {
+    flex: 1,
+    backgroundColor: appThemes.lavender.background,
+  },
+  onboardingAmbientLayer: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  onboardingAmbientTopRight: {
+    position: 'absolute',
+    top: -36,
+    right: -42,
+    width: 170,
+    height: 170,
+    borderRadius: 85,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.72)',
+    backgroundColor: 'rgba(255,255,255,0.44)',
+  },
+  onboardingAmbientMiddleLeft: {
+    position: 'absolute',
+    top: 190,
+    left: -52,
+    width: 132,
+    height: 132,
+    borderRadius: 66,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.68)',
+    backgroundColor: 'rgba(232,227,255,0.46)',
+  },
+  onboardingAmbientBottomRight: {
+    position: 'absolute',
+    bottom: 64,
+    right: -28,
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.66)',
+    backgroundColor: 'rgba(221,244,255,0.42)',
+  },
+  onboardingScroll: {
+    flex: 1,
+    width: '100%',
+  },
+  onboardingScrollContent: {
+    flexGrow: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+  },
+  onboardingInner: {
+    width: '100%',
+    maxWidth: 440,
+    alignItems: 'center',
+  },
+  onboardingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(121,87,213,0.2)',
+    backgroundColor: 'rgba(255,255,255,0.82)',
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+  },
+  onboardingBadgeText: {
+    color: palette.lavenderDeep,
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  onboardingDemoBlock: {
+    width: '100%',
+    alignItems: 'center',
+    marginTop: 18,
+  },
+  onboardingDemoStage: {
+    width: '100%',
+    minHeight: 164,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    borderRadius: 28,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.9)',
+    backgroundColor: 'rgba(255,255,255,0.72)',
+    paddingHorizontal: 16,
+    paddingVertical: 18,
+  },
+  onboardingDemoPhoneArea: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  onboardingLeftArrow: {
+    opacity: 0.55,
+  },
+  onboardingRightArrow: {
+    opacity: 0.55,
+  },
+  onboardingPhoneFrame: {
+    width: 66,
+    height: 116,
+    borderWidth: 2,
+    borderColor: '#B9A6F1',
+    borderRadius: 21,
+    padding: 5,
+    backgroundColor: 'rgba(255,255,255,0.96)',
+    shadowColor: palette.lavenderDeep,
+    shadowOffset: { width: 0, height: 7 },
+    shadowOpacity: 0.16,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  demoWaveRow: {
+    height: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 3,
+    marginBottom: 4,
+  },
+  demoWaveBar: {
+    width: 4,
+    borderRadius: 2,
+    backgroundColor: palette.lavenderDeep,
+  },
+  onboardingStepArrow: {
+    opacity: 0.65,
+  },
+  onboardingDemoBubbleWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  onboardingMemoBubble: {
+    width: 102,
+    height: 102,
+    borderRadius: 51,
+    borderWidth: 1.5,
+    overflow: 'hidden',
+    shadowColor: palette.lavenderDeep,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.14,
+    shadowRadius: 14,
+    elevation: 3,
+  },
+  onboardingMemoBubbleGradient: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 10,
+  },
+  onboardingMemoGloss: {
+    position: 'absolute',
+    top: 10,
+    left: 16,
+    width: 28,
+    height: 12,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255,255,255,0.72)',
+    transform: [{ rotate: '-22deg' }],
+  },
+  onboardingMemoTitle: {
+    color: palette.ink,
+    fontSize: 13,
+    fontWeight: '900',
+    textAlign: 'center',
+  },
+  onboardingMemoMeta: {
+    marginTop: 2,
+    color: palette.lavenderDeep,
+    fontSize: 11,
+    fontWeight: '800',
+    textAlign: 'center',
+  },
+  replayButton: {
+    marginTop: 10,
+    minHeight: 38,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(121,87,213,0.18)',
+    backgroundColor: 'rgba(255,255,255,0.88)',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  replayButtonText: {
+    color: palette.lavenderDeep,
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  onboardingCalibrationIllustrationWrap: {
+    marginTop: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 28,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.9)',
+    backgroundColor: 'rgba(255,255,255,0.72)',
+    paddingHorizontal: 28,
+    paddingVertical: 18,
+  },
+  onboardingSuccessStage: {
+    marginTop: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  onboardingSuccessBubble: {
+    width: 118,
+    height: 118,
+    borderRadius: 59,
+    borderWidth: 1.5,
+    overflow: 'hidden',
+    shadowColor: palette.lavenderDeep,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.16,
+    shadowRadius: 16,
+    elevation: 4,
+  },
+  onboardingSuccessBadge: {
+    marginTop: 6,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: palette.mintDeep,
+  },
+  onboardingTitle: {
+    marginTop: 20,
+    color: palette.ink,
+    fontSize: 22,
+    lineHeight: 30,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  onboardingBody: {
+    marginTop: 10,
+    color: palette.muted,
+    fontSize: 15,
+    lineHeight: 23,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  onboardingNoticeList: {
+    width: '100%',
+    marginTop: 16,
+    gap: 8,
+  },
+  onboardingNoticeCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    paddingHorizontal: 4,
+    paddingVertical: 4,
+  },
+  onboardingNoticeIcon: {
+    marginTop: 2,
+  },
+  onboardingNoticeText: {
+    flex: 1,
+    color: palette.muted,
+    fontSize: 13,
+    lineHeight: 19,
+    fontWeight: '700',
+  },
+  onboardingReassuranceBanner: {
+    marginTop: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(121,87,213,0.2)',
+    backgroundColor: 'rgba(255,255,255,0.86)',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  onboardingReassuranceText: {
+    flexShrink: 1,
+    color: palette.ink,
+    fontSize: 13,
+    lineHeight: 19,
+    fontWeight: '800',
+    textAlign: 'center',
+  },
+  onboardingFeedback: {
+    marginTop: 12,
+    color: palette.lavenderDeep,
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: '900',
+    textAlign: 'center',
+  },
+  onboardingErrorBanner: {
+    width: '100%',
+    marginTop: 14,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(139,111,45,0.22)',
+    backgroundColor: 'rgba(255,248,232,0.95)',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  onboardingErrorText: {
+    color: '#8B6F2D',
+    fontSize: 13,
+    lineHeight: 19,
+    fontWeight: '800',
+    textAlign: 'center',
+  },
+  onboardingActions: {
+    width: '100%',
+    marginTop: 20,
+    gap: 10,
+  },
+  onboardingPrimaryButton: {
+    width: '100%',
+    minHeight: 54,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderRadius: 16,
+    backgroundColor: palette.ink,
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+  },
+  onboardingPrimaryLabel: {
+    color: palette.white,
+    fontSize: 16,
+    fontWeight: '900',
+    textAlign: 'center',
+  },
+  onboardingSecondaryButton: {
+    width: '100%',
+    minHeight: 50,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(121,87,213,0.2)',
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    paddingHorizontal: 18,
+    paddingVertical: 13,
+  },
+  onboardingSecondaryLabel: {
+    color: palette.ink,
+    fontSize: 15,
+    fontWeight: '800',
+    textAlign: 'center',
+  },
+  onboardingFooter: {
+    marginTop: 14,
+    color: palette.muted,
+    fontSize: 12,
+    lineHeight: 18,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  buttonPressed: {
+    opacity: 0.86,
+    transform: [{ scale: 0.98 }],
   },
   tiltIllustration: {
     width: 190,

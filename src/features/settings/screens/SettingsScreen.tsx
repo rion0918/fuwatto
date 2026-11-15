@@ -291,6 +291,21 @@ export function SettingsScreen() {
     };
   }, [refreshNotificationPermissionStatus, refreshProAccess]);
 
+  useEffect(() => {
+    if (!isRaiseToSpeakCalibrating) return undefined;
+
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      if (nextAppState === 'background') {
+        setRaiseToSpeakCalibrationPhase('awaiting-tilt');
+        setRaiseToSpeakSetupMessage(null);
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [isRaiseToSpeakCalibrating]);
+
   const savePreviousTime = async (value: string) => {
     if (
       isUpdatingPreviousNotifyTime ||
@@ -491,6 +506,7 @@ export function SettingsScreen() {
       }
 
       if (result.status === 'permission-denied') {
+        setRaiseToSpeakCalibrationPhase('intro');
         const permissionLabel = Platform.OS === 'android' ? 'マイク' : 'マイクとモーション';
         const message = result.canAskAgain
           ? `${permissionLabel}の権限を許可してください。`

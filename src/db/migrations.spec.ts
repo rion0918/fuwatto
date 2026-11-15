@@ -26,7 +26,7 @@ function makeDatabase(userVersion: number, columns: string[] = []) {
 test('fresh database runs sequential migrations and records the current version', async () => {
   const fake = makeDatabase(0);
   await runDatabaseMigrations(fake.database);
-  assert.equal(fake.getVersion(), 7);
+  assert.equal(fake.getVersion(), 8);
   assert.match(fake.statements.join('\n'), /CREATE TABLE IF NOT EXISTS reminders/);
   assert.match(fake.statements.join('\n'), /ADD COLUMN noon_target_time/);
   assert.match(fake.statements.join('\n'), /ADD COLUMN evening_target_time/);
@@ -42,14 +42,22 @@ test('fresh database runs sequential migrations and records the current version'
     /ADD COLUMN notification_channel_version INTEGER NOT NULL DEFAULT 0/,
   );
   assert.match(fake.statements.join('\n'), /ADD COLUMN all_day_notify_time/);
+  assert.match(
+    fake.statements.join('\n'),
+    /ADD COLUMN raise_to_speak_onboarding_completed INTEGER NOT NULL DEFAULT 0/,
+  );
   assert.match(fake.statements.join('\n'), /theme TEXT NOT NULL DEFAULT 'lavender'/);
-  assert.match(fake.statements.join('\n'), /0, 0, 'unknown', 0, 'lavender'/);
+  assert.match(fake.statements.join('\n'), /0, 0, 0, 'unknown', 0, 'lavender'/);
+  assert.doesNotMatch(
+    fake.statements.join('\n'),
+    /UPDATE app_settings SET raise_to_speak_onboarding_completed = 1/,
+  );
 });
 
 test('legacy database adds the notification sound column once', async () => {
   const fake = makeDatabase(1, ['id', 'theme']);
   await runDatabaseMigrations(fake.database);
-  assert.equal(fake.getVersion(), 7);
+  assert.equal(fake.getVersion(), 8);
   assert.equal(
     fake.statements.filter((statement) =>
       statement.includes('ADD COLUMN notification_sound_enabled'),
@@ -63,7 +71,7 @@ test('legacy database adds the notification sound column once', async () => {
 });
 
 test('migration rerun is idempotent', async () => {
-  const fake = makeDatabase(7, [
+  const fake = makeDatabase(8, [
     'id',
     'notification_sound_enabled',
     'noon_target_time',
@@ -71,6 +79,7 @@ test('migration rerun is idempotent', async () => {
     'night_target_time',
     'raise_to_speak_enabled',
     'raise_to_speak_intro_seen',
+    'raise_to_speak_onboarding_completed',
     'notification_permission_intro_seen',
     'analytics_consent',
     'notification_channel_version',
@@ -82,43 +91,46 @@ test('migration rerun is idempotent', async () => {
 });
 
 test('current database repairs a missing all-day reminder column', async () => {
-  const fake = makeTableAwareDatabase(7, {
+  const fake = makeTableAwareDatabase(8, {
     reminders: ['id'],
     app_settings: [
       'id',
       'analytics_consent',
       'notification_channel_version',
       'all_day_notify_time',
+      'raise_to_speak_onboarding_completed',
     ],
   });
 
   await runDatabaseMigrations(fake.database);
 
-  assert.equal(fake.getVersion(), 7);
+  assert.equal(fake.getVersion(), 8);
   assert.deepEqual(fake.getColumns('reminders'), ['id', 'all_day']);
   assert.deepEqual(fake.getColumns('app_settings'), [
     'id',
     'analytics_consent',
     'notification_channel_version',
     'all_day_notify_time',
+    'raise_to_speak_onboarding_completed',
   ]);
 });
 
 test('current database repairs missing all-day settings and compatibility columns', async () => {
-  const fake = makeTableAwareDatabase(7, {
+  const fake = makeTableAwareDatabase(8, {
     reminders: ['id', 'all_day'],
     app_settings: ['id'],
   });
 
   await runDatabaseMigrations(fake.database);
 
-  assert.equal(fake.getVersion(), 7);
+  assert.equal(fake.getVersion(), 8);
   assert.deepEqual(fake.getColumns('reminders'), ['id', 'all_day']);
   assert.deepEqual(fake.getColumns('app_settings'), [
     'id',
     'analytics_consent',
     'notification_channel_version',
     'all_day_notify_time',
+    'raise_to_speak_onboarding_completed',
   ]);
 });
 
@@ -136,7 +148,7 @@ test('legacy version 5 database repairs a missing analytics consent column', asy
 
   await runDatabaseMigrations(fake.database);
 
-  assert.equal(fake.getVersion(), 7);
+  assert.equal(fake.getVersion(), 8);
   assert.equal(
     fake.statements.filter((statement) => statement.includes('ADD COLUMN analytics_consent'))
       .length,
@@ -152,7 +164,7 @@ test('v2 database adds all quick-add preset columns with current defaults', asyn
   const fake = makeDatabase(2, ['id', 'notification_sound_enabled']);
   await runDatabaseMigrations(fake.database);
 
-  assert.equal(fake.getVersion(), 7);
+  assert.equal(fake.getVersion(), 8);
   const migration = fake.statements.join('\n');
   assert.match(migration, /ADD COLUMN noon_target_time TEXT NOT NULL DEFAULT '12:00'/);
   assert.match(migration, /ADD COLUMN evening_target_time TEXT NOT NULL DEFAULT '18:00'/);
@@ -169,7 +181,7 @@ test('v3 database adds raise-to-speak settings disabled by default', async () =>
   ]);
   await runDatabaseMigrations(fake.database);
 
-  assert.equal(fake.getVersion(), 7);
+  assert.equal(fake.getVersion(), 8);
   const migration = fake.statements.join('\n');
   assert.match(migration, /ADD COLUMN raise_to_speak_enabled INTEGER NOT NULL DEFAULT 0/);
   assert.match(migration, /ADD COLUMN raise_to_speak_intro_seen INTEGER NOT NULL DEFAULT 0/);
@@ -187,12 +199,51 @@ test('v4 database adds analytics consent and leaves notification compatibility t
   ]);
   await runDatabaseMigrations(fake.database);
 
-  assert.equal(fake.getVersion(), 7);
+  assert.equal(fake.getVersion(), 8);
   assert.match(
     fake.statements.join('\n'),
     /ADD COLUMN analytics_consent TEXT NOT NULL DEFAULT 'unknown'/,
   );
   assert.match(fake.statements.join('\n'), /PRAGMA user_version = 6/);
+});
+
+test('existing v7 database with zero reminders marks raise-to-speak onboarding completed without changing existing flags', async () => {
+  const fake = makeTableAwareDatabase(7, {
+    reminders: ['id', 'all_day'],
+    app_settings: [
+      'id',
+      'analytics_consent',
+      'notification_channel_version',
+      'all_day_notify_time',
+      'raise_to_speak_enabled',
+      'raise_to_speak_intro_seen',
+    ],
+  });
+
+  await runDatabaseMigrations(fake.database);
+
+  assert.equal(fake.getVersion(), 8);
+  assert.ok(fake.getColumns('app_settings').includes('raise_to_speak_onboarding_completed'));
+  const migrationSql = fake.statements.join('\n');
+  assert.match(migrationSql, /UPDATE app_settings SET raise_to_speak_onboarding_completed = 1;/);
+  assert.doesNotMatch(migrationSql, /SET raise_to_speak_enabled/);
+  assert.doesNotMatch(migrationSql, /SET raise_to_speak_intro_seen/);
+  assert.match(migrationSql, /0, 0, 1, 'unknown', 0, 'lavender'/);
+});
+
+test('existing app_settings table at user_version 0 is treated as an existing database for onboarding', async () => {
+  const fake = makeTableAwareDatabase(0, {
+    reminders: ['id'],
+    app_settings: ['id', 'theme'],
+  });
+
+  await runDatabaseMigrations(fake.database);
+
+  assert.equal(fake.getVersion(), 8);
+  assert.match(
+    fake.statements.join('\n'),
+    /UPDATE app_settings SET raise_to_speak_onboarding_completed = 1;/,
+  );
 });
 
 function makeTableAwareDatabase(

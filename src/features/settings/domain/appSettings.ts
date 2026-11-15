@@ -16,6 +16,7 @@ export type AppSettings = {
   notificationPermissionIntroSeen: boolean;
   raiseToSpeakEnabled: boolean;
   raiseToSpeakIntroSeen: boolean;
+  raiseToSpeakOnboardingCompleted: boolean;
   analyticsConsent: AnalyticsConsent;
   theme: AppTheme;
 };
@@ -39,6 +40,7 @@ export const DEFAULT_ALL_DAY_NOTIFY_TIME = '09:00';
 export const DEFAULT_RAISE_TO_SPEAK_SETTINGS = {
   raiseToSpeakEnabled: false,
   raiseToSpeakIntroSeen: false,
+  raiseToSpeakOnboardingCompleted: false,
 } as const;
 
 export const DEFAULT_NOTIFICATION_PERMISSION_SETTINGS = {

@@ -5,6 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import {
   Alert,
+  AppState,
   BackHandler,
   Image,
   ImageBackground,
@@ -25,6 +26,7 @@ import { NotificationPermissionIntroModal } from '../components/NotificationPerm
 import {
   RaiseToSpeakIntroModal,
   type RaiseToSpeakCalibrationPhase,
+  type RaiseToSpeakSetupFailureReason,
 } from '../components/RaiseToSpeakIntroModal';
 import { ReminderSelectionBar } from '../components/ReminderSelectionBar';
 import { makeBulkDeleteMotions } from '../components/reminderBulkDeleteMotion';
@@ -163,10 +165,49 @@ export function HomeScreen() {
   const [raiseToSpeakCalibrationPhase, setRaiseToSpeakCalibrationPhase] =
     useState<RaiseToSpeakCalibrationPhase>('intro');
   const [raiseToSpeakSetupMessage, setRaiseToSpeakSetupMessage] = useState<string | null>(null);
+  const [raiseToSpeakSetupFailureReason, setRaiseToSpeakSetupFailureReason] =
+    useState<RaiseToSpeakSetupFailureReason | null>(null);
+  const [raiseToSpeakPermissionCanAskAgain, setRaiseToSpeakPermissionCanAskAgain] = useState(true);
+  const [raiseToSpeakOnboardingSession, setRaiseToSpeakOnboardingSession] = useState(false);
+  const raiseToSpeakBackActionRef = useRef<(() => boolean) | null>(null);
   const [isNotificationPermissionIntroVisible, setIsNotificationPermissionIntroVisible] =
     useState(false);
   const [isNotificationPermissionIntroBusy, setIsNotificationPermissionIntroBusy] = useState(false);
   const [notificationPermissionCanAskAgain, setNotificationPermissionCanAskAgain] = useState(true);
+
+  const isAnalyticsConsentPending =
+    analytics.configured && settings?.analyticsConsent === 'unknown';
+  const shouldShowRaiseToSpeakOnboarding = Boolean(
+    settings && !settings.raiseToSpeakOnboardingCompleted && !isAnalyticsConsentPending,
+  );
+  const isRaiseToSpeakOnboardingActive =
+    shouldShowRaiseToSpeakOnboarding ||
+    (raiseToSpeakOnboardingSession && raiseToSpeakCalibrationPhase === 'success');
+  const isOnboardingGatePending =
+    !settings || isAnalyticsConsentPending || isRaiseToSpeakOnboardingActive;
+
+  useEffect(() => {
+    if (shouldShowRaiseToSpeakOnboarding) {
+      setRaiseToSpeakOnboardingSession(true);
+    } else if (raiseToSpeakCalibrationPhase !== 'success') {
+      setRaiseToSpeakOnboardingSession(false);
+    }
+  }, [raiseToSpeakCalibrationPhase, shouldShowRaiseToSpeakOnboarding]);
+
+  useEffect(() => {
+    if (!isRaiseToSpeakCalibrating) return undefined;
+
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      if (nextAppState === 'background') {
+        setRaiseToSpeakCalibrationPhase('awaiting-tilt');
+        setRaiseToSpeakSetupMessage(null);
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [isRaiseToSpeakCalibrating]);
 
   const selectedReminder = reminders.find((r) => r.id === selectedReminderId) || null;
   const activeReminderCount = reminders.filter(
@@ -277,6 +318,7 @@ export function HomeScreen() {
 
   useEffect(() => {
     if (
+      isOnboardingGatePending ||
       routeParams.action !== 'add' ||
       !routeParams.intent ||
       consumedIntentRef.current === routeParams.intent ||
@@ -288,7 +330,7 @@ export function HomeScreen() {
     if (routeParams.action === 'add') {
       void requestQuickAdd('widget_deep_link', { focusTitle: true });
     }
-  }, [loading, reminders, requestQuickAdd, routeParams]);
+  }, [isOnboardingGatePending, loading, reminders, requestQuickAdd, routeParams]);
 
   const refreshWidgetReminders = useCallback(async () => {
     const result = await refresh();
@@ -306,7 +348,12 @@ export function HomeScreen() {
     [closeQuickAdd],
   );
 
-  useWidgetDetailIntent(routeParams, refreshWidgetReminders, openWidgetReminder);
+  useWidgetDetailIntent(
+    routeParams,
+    refreshWidgetReminders,
+    openWidgetReminder,
+    !isOnboardingGatePending,
+  );
 
   useEffect(() => {
     if (!loading && !error && selectedReminderId && !selectedReminder) {
@@ -403,6 +450,10 @@ export function HomeScreen() {
 
       const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
         if (isReminderDeletionInProgressRef.current) {
+          return true;
+        }
+
+        if (raiseToSpeakBackActionRef.current?.()) {
           return true;
         }
 
@@ -810,14 +861,53 @@ export function HomeScreen() {
     [analytics, updateReminderSchedule],
   );
 
-  const handleDismissRaiseToSpeakIntro = useCallback(() => {
+  const handleSkipRaiseToSpeakOnboarding = useCallback(async () => {
     if (isRaiseToSpeakSetupBusy) return;
 
     setRaiseToSpeakSetupMessage(null);
+    setRaiseToSpeakSetupFailureReason(null);
     setIsRaiseToSpeakCalibrating(false);
     setRaiseToSpeakCalibrationPhase('intro');
-    void updateSettings({ raiseToSpeakEnabled: false, raiseToSpeakIntroSeen: false });
+    setIsRaiseToSpeakSetupBusy(true);
+    try {
+      await updateSettings({
+        raiseToSpeakEnabled: false,
+        raiseToSpeakOnboardingCompleted: true,
+      });
+    } catch {
+      setRaiseToSpeakSetupFailureReason('save-failed');
+      setRaiseToSpeakSetupMessage('設定を保存できませんでした。もう一度お試しください。');
+    } finally {
+      setIsRaiseToSpeakSetupBusy(false);
+    }
   }, [isRaiseToSpeakSetupBusy, updateSettings]);
+
+  const handleDismissRaiseToSpeakIntro = useCallback(() => {
+    if (isRaiseToSpeakSetupBusy) return;
+
+    const wasCalibrating = isRaiseToSpeakCalibrating;
+    setRaiseToSpeakSetupMessage(null);
+    setRaiseToSpeakSetupFailureReason(null);
+    setIsRaiseToSpeakCalibrating(false);
+    setRaiseToSpeakCalibrationPhase('intro');
+
+    if (isRaiseToSpeakOnboardingActive) {
+      if (wasCalibrating) {
+        return;
+      }
+
+      void handleSkipRaiseToSpeakOnboarding();
+      return;
+    }
+
+    void updateSettings({ raiseToSpeakEnabled: false, raiseToSpeakIntroSeen: false });
+  }, [
+    handleSkipRaiseToSpeakOnboarding,
+    isRaiseToSpeakCalibrating,
+    isRaiseToSpeakOnboardingActive,
+    isRaiseToSpeakSetupBusy,
+    updateSettings,
+  ]);
 
   const handlePrepareRaiseToSpeak = useCallback(async () => {
     if (isRaiseToSpeakSetupBusy) return;
@@ -825,6 +915,8 @@ export function HomeScreen() {
     setIsRaiseToSpeakSetupBusy(true);
     setRaiseToSpeakCalibrationPhase('preparing');
     setRaiseToSpeakSetupMessage(null);
+    setRaiseToSpeakSetupFailureReason(null);
+    setRaiseToSpeakPermissionCanAskAgain(true);
     try {
       const result = await raiseToSpeak.prepare();
       if (result.status === 'ready') {
@@ -835,12 +927,14 @@ export function HomeScreen() {
 
       if (result.status === 'permission-denied') {
         setRaiseToSpeakCalibrationPhase('intro');
+        setRaiseToSpeakSetupFailureReason('permission-denied');
+        setRaiseToSpeakPermissionCanAskAgain(result.canAskAgain);
         const permissionLabel = Platform.OS === 'android' ? 'マイク' : 'マイクとモーション';
         const message = result.canAskAgain
           ? `${permissionLabel}の権限を許可してください。`
           : `端末の設定で${permissionLabel}の権限を許可してください。`;
         setRaiseToSpeakSetupMessage(message);
-        if (!result.canAskAgain) {
+        if (!result.canAskAgain && !isRaiseToSpeakOnboardingActive) {
           Alert.alert('権限が必要です', message, [
             { text: 'あとで', style: 'cancel' },
             { text: '設定を開く', onPress: () => void Linking.openSettings() },
@@ -856,14 +950,16 @@ export function HomeScreen() {
         'speech-unavailable': 'この端末では日本語の音声認識を利用できません。',
       }[result.status];
       setRaiseToSpeakCalibrationPhase('intro');
+      setRaiseToSpeakSetupFailureReason('unavailable');
       setRaiseToSpeakSetupMessage(message);
     } catch {
       setRaiseToSpeakCalibrationPhase('intro');
+      setRaiseToSpeakSetupFailureReason('unavailable');
       setRaiseToSpeakSetupMessage('音声入力の準備を完了できませんでした。');
     } finally {
       setIsRaiseToSpeakSetupBusy(false);
     }
-  }, [isRaiseToSpeakSetupBusy, raiseToSpeak]);
+  }, [isRaiseToSpeakOnboardingActive, isRaiseToSpeakSetupBusy, raiseToSpeak]);
 
   const handleRaiseToSpeakStart = useCallback(() => {
     if (isRaiseToSpeakCalibrating) {
@@ -907,15 +1003,18 @@ export function HomeScreen() {
           await updateSettings({
             raiseToSpeakEnabled: true,
             raiseToSpeakIntroSeen: true,
+            ...(isRaiseToSpeakOnboardingActive ? { raiseToSpeakOnboardingCompleted: true } : {}),
           });
           setIsRaiseToSpeakCalibrating(false);
           setRaiseToSpeakCalibrationPhase('success');
           setRaiseToSpeakSetupMessage(null);
+          setRaiseToSpeakSetupFailureReason(null);
           void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
         } catch {
           raiseSessionActiveRef.current = false;
           setIsRaiseToSpeakCalibrating(false);
           setRaiseToSpeakCalibrationPhase('intro');
+          setRaiseToSpeakSetupFailureReason('save-failed');
           setRaiseToSpeakSetupMessage('設定を保存できませんでした。もう一度お試しください。');
         } finally {
           setIsRaiseToSpeakSetupBusy(false);
@@ -928,12 +1027,41 @@ export function HomeScreen() {
     },
     [
       isRaiseToSpeakCalibrating,
+      isRaiseToSpeakOnboardingActive,
       isRaiseToSpeakSetupBusy,
       raiseToSpeakCalibrationPhase,
       requestVoiceInputStop,
       updateSettings,
     ],
   );
+
+  const isRaiseToSpeakIntroModalVisible = Boolean(
+    !isAnalyticsConsentPending &&
+    (shouldShowRaiseToSpeakOnboarding ||
+      (settings?.raiseToSpeakEnabled && !settings.raiseToSpeakIntroSeen) ||
+      raiseToSpeakCalibrationPhase === 'success'),
+  );
+
+  useEffect(() => {
+    raiseToSpeakBackActionRef.current = () => {
+      if (!isRaiseToSpeakIntroModalVisible) return false;
+      if (
+        isRaiseToSpeakSetupBusy ||
+        raiseToSpeakCalibrationPhase === 'preparing' ||
+        raiseToSpeakCalibrationPhase === 'saving' ||
+        raiseToSpeakCalibrationPhase === 'success'
+      ) {
+        return true;
+      }
+      handleDismissRaiseToSpeakIntro();
+      return true;
+    };
+  }, [
+    handleDismissRaiseToSpeakIntro,
+    isRaiseToSpeakIntroModalVisible,
+    isRaiseToSpeakSetupBusy,
+    raiseToSpeakCalibrationPhase,
+  ]);
 
   const {
     sensorStatus: raiseToSpeakSensorStatus,
@@ -944,7 +1072,10 @@ export function HomeScreen() {
     enabled: Boolean(settings?.raiseToSpeakEnabled) || isRaiseToSpeakCalibrating,
     trackTiltProgress: isRaiseToSpeakCalibrating,
     blocked:
-      (!settings?.raiseToSpeakIntroSeen && !isRaiseToSpeakCalibrating) ||
+      !settings ||
+      isAnalyticsConsentPending ||
+      (isRaiseToSpeakOnboardingActive && !isRaiseToSpeakCalibrating) ||
+      (!settings.raiseToSpeakIntroSeen && !isRaiseToSpeakCalibrating) ||
       isRaiseToSpeakSetupBusy ||
       raiseToSpeakCalibrationPhase === 'success' ||
       isSelectionMode ||
@@ -1189,17 +1320,24 @@ export function HomeScreen() {
 
       <RaiseToSpeakIntroModal
         visible={Boolean(
-          settings?.raiseToSpeakEnabled &&
-          (!settings.raiseToSpeakIntroSeen || raiseToSpeakCalibrationPhase === 'success'),
+          !isAnalyticsConsentPending &&
+          (shouldShowRaiseToSpeakOnboarding ||
+            (settings?.raiseToSpeakEnabled && !settings.raiseToSpeakIntroSeen) ||
+            raiseToSpeakCalibrationPhase === 'success'),
         )}
+        mode={isRaiseToSpeakOnboardingActive ? 'onboarding' : 'modal'}
         busy={isRaiseToSpeakSetupBusy}
         phase={raiseToSpeakCalibrationPhase}
         message={raiseToSpeakSetupMessage}
+        setupFailureReason={raiseToSpeakSetupFailureReason}
+        permissionCanAskAgain={raiseToSpeakPermissionCanAskAgain}
         sensorStatus={raiseToSpeakSensorStatus}
         sensorFailureReason={raiseToSpeakSensorFailureReason}
         tiltProgress={raiseToSpeakTiltProgress}
         onEnable={() => void handlePrepareRaiseToSpeak()}
         onDismiss={handleDismissRaiseToSpeakIntro}
+        onSkip={() => void handleSkipRaiseToSpeakOnboarding()}
+        onOpenSettings={() => void Linking.openSettings()}
         onRetry={retryRaiseToSpeakSensor}
         onSuccessComplete={() => setRaiseToSpeakCalibrationPhase('intro')}
       />

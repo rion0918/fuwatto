@@ -43,6 +43,7 @@ function makeSettings(): AppSettings {
     notificationPermissionIntroSeen: true,
     raiseToSpeakEnabled: false,
     raiseToSpeakIntroSeen: false,
+    raiseToSpeakOnboardingCompleted: true,
     analyticsConsent: 'denied',
     theme: 'lavender',
   };

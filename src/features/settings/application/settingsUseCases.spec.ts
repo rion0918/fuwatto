@@ -15,6 +15,7 @@ const baseSettings: AppSettings = {
   notificationPermissionIntroSeen: false,
   raiseToSpeakEnabled: false,
   raiseToSpeakIntroSeen: false,
+  raiseToSpeakOnboardingCompleted: false,
   analyticsConsent: 'unknown',
   theme: 'lavender',
 };
@@ -127,4 +128,26 @@ test('failed consent persistence leaves capture disabled without a rollback writ
   await assert.rejects(() => useCases.updateAnalyticsConsent('granted'));
 
   assert.deepEqual(events, ['persist:{"analyticsConsent":"granted"}', 'analytics:false']);
+});
+
+test('raise-to-speak onboarding completion persists enabled and skipped outcomes', async () => {
+  const { dependencies, events } = createDependencies();
+  const useCases = createSettingsUseCases(dependencies);
+
+  const enabled = await useCases.update({
+    raiseToSpeakEnabled: true,
+    raiseToSpeakIntroSeen: true,
+    raiseToSpeakOnboardingCompleted: true,
+  });
+  assert.equal(enabled.raiseToSpeakEnabled, true);
+  assert.equal(enabled.raiseToSpeakIntroSeen, true);
+  assert.equal(enabled.raiseToSpeakOnboardingCompleted, true);
+
+  const skipped = await useCases.update({
+    raiseToSpeakEnabled: false,
+    raiseToSpeakOnboardingCompleted: true,
+  });
+  assert.equal(skipped.raiseToSpeakEnabled, false);
+  assert.equal(skipped.raiseToSpeakOnboardingCompleted, true);
+  assert.equal(events.length, 2);
 });

@@ -7,11 +7,12 @@ export function useWidgetDetailIntent(
   { action, id, intent }: WidgetRouteIntent,
   refresh: () => Promise<readonly { id: string }[]>,
   open: (id: string) => void,
+  enabled = true,
 ) {
   const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
-    if (action !== 'view' || !id || !intent) return;
+    if (!enabled || action !== 'view' || !id || !intent) return;
     let cancelled = false;
 
     void refresh().then(
@@ -43,5 +44,5 @@ export function useWidgetDetailIntent(
     return () => {
       cancelled = true;
     };
-  }, [action, id, intent, attempt, refresh, open]);
+  }, [action, enabled, id, intent, attempt, refresh, open]);
 }

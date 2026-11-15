@@ -70,3 +70,19 @@ test('missing and failed reads differ, and failed reads can be retried', async (
   await act(async () => retry?.onPress?.());
   await waitFor(() => expect(open).toHaveBeenCalledWith('first'));
 });
+
+test('holds view deep links while disabled and opens once enabled', async () => {
+  const refresh = jest.fn(async () => [{ id: 'first' }]);
+  const open = jest.fn();
+  const view = await renderHook<void, { enabled: boolean }>(
+    ({ enabled }) =>
+      useWidgetDetailIntent({ action: 'view', id: 'first', intent: '1' }, refresh, open, enabled),
+    { initialProps: { enabled: false } },
+  );
+
+  expect(refresh).not.toHaveBeenCalled();
+  expect(open).not.toHaveBeenCalled();
+
+  await view.rerender({ enabled: true });
+  await waitFor(() => expect(open).toHaveBeenCalledWith('first'));
+});
