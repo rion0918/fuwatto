@@ -1,8 +1,34 @@
 import { fireEvent, render } from '@testing-library/react-native';
 import type { ReactNode } from 'react';
+import { Platform } from 'react-native';
 
 import type { Reminder } from '../domain/reminder';
+import { palette } from '../../../constants/colors';
 import { ReminderScheduleEditorModal } from './ReminderScheduleEditorModal';
+
+// Exercise the production JSX interop for Pressable; the test Babel preset skips NativeWind.
+jest.mock('react-native', () => {
+  const native = jest.requireActual<typeof import('react-native')>('react-native');
+  const React = jest.requireActual<typeof import('react')>('react');
+  let registered = false;
+
+  const Pressable = React.forwardRef(function ProductionPressable(props, ref) {
+    const { cssInterop } = jest.requireActual<typeof import('react-native-css-interop')>(
+      'react-native-css-interop',
+    );
+    const { jsx } = jest.requireActual('react-native-css-interop/jsx-runtime');
+    if (!registered) {
+      cssInterop(native.Pressable, { className: 'style' });
+      registered = true;
+    }
+    return jsx(native.Pressable, { ...props, ref });
+  });
+  return new Proxy(native, {
+    get(target, key) {
+      return key === 'Pressable' ? Pressable : Reflect.get(target, key);
+    },
+  });
+});
 
 jest.mock('react-native-gesture-handler', () => ({
   ...jest.requireActual('react-native-gesture-handler'),
@@ -28,6 +54,7 @@ const initialReminder: Pick<Reminder, 'targetAt' | 'previousNotifyAt'> = {
 };
 
 describe('ReminderScheduleEditorModal', () => {
+  const originalPlatform = Platform.OS;
   beforeEach(() => {
     jest.useFakeTimers();
     jest.setSystemTime(new Date(2030, 4, 12, 10));
@@ -35,6 +62,25 @@ describe('ReminderScheduleEditorModal', () => {
 
   afterEach(() => {
     jest.useRealTimers();
+    Object.defineProperty(Platform, 'OS', { configurable: true, value: originalPlatform });
+  });
+
+  it('keeps the complete button visible and large enough with production style interop', async () => {
+    const view = await render(
+      <ReminderScheduleEditorModal
+        visible
+        reminder={initialReminder}
+        isSaving={false}
+        onConfirm={jest.fn()}
+        onClose={jest.fn()}
+      />,
+    );
+
+    expect(view.getByLabelText('日時変更を完了')).toHaveStyle({
+      backgroundColor: palette.lavenderDeep,
+      minHeight: 48,
+      minWidth: 84,
+    });
   });
 
   it('edits date and time, keeps the draft during a visible rerender, and saves it', async () => {
@@ -152,6 +198,60 @@ describe('ReminderScheduleEditorModal', () => {
     expect(slider).not.toBeChecked();
     expect(view.getByLabelText('時刻を変更')).toBeOnTheScreen();
     expect(view.getAllByText('14:00').length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('confirms the all-day change on Android', async () => {
+    Object.defineProperty(Platform, 'OS', { configurable: true, value: 'android' });
+    const onConfirm = jest.fn();
+    const view = await render(
+      <ReminderScheduleEditorModal
+        visible
+        reminder={initialReminder}
+        isSaving={false}
+        onConfirm={onConfirm}
+        onClose={jest.fn()}
+      />,
+    );
+
+    await fireEvent(view.getByRole('switch'), 'accessibilityTap');
+    await fireEvent.press(view.getByLabelText('日時変更を完了'));
+
+    expect(onConfirm).toHaveBeenCalledWith({
+      targetDate: '2030-05-13',
+      targetTime: '14:00',
+      allDay: true,
+    });
+  });
+
+  it('confirms an Android native time selection after switching back from all-day', async () => {
+    Object.defineProperty(Platform, 'OS', { configurable: true, value: 'android' });
+    const onConfirm = jest.fn();
+    const view = await render(
+      <ReminderScheduleEditorModal
+        visible
+        reminder={{ ...initialReminder, allDay: true }}
+        isSaving={false}
+        onConfirm={onConfirm}
+        onClose={jest.fn()}
+      />,
+    );
+
+    await fireEvent(view.getByRole('switch'), 'accessibilityTap');
+    await fireEvent.press(view.getByLabelText('時刻を変更'));
+    await fireEvent(
+      view.getByTestId('date-time-picker'),
+      'change',
+      { type: 'set' },
+      new Date(2030, 4, 13, 15, 30),
+    );
+    expect(view.queryByTestId('date-time-picker')).toBeNull();
+    await fireEvent.press(view.getByLabelText('日時変更を完了'));
+
+    expect(onConfirm).toHaveBeenCalledWith({
+      targetDate: '2030-05-13',
+      targetTime: '15:30',
+      allDay: false,
+    });
   });
 
   it('disables every action while saving', async () => {

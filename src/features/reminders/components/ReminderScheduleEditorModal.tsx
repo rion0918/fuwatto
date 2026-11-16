@@ -174,6 +174,7 @@ export function ReminderScheduleEditorModal({
               >
                 <View style={styles.actionBar}>
                   <Pressable
+                    cssInterop={false}
                     accessibilityRole="button"
                     accessibilityLabel="日時変更をキャンセル"
                     accessibilityState={{ disabled: isSaving }}
@@ -190,6 +191,7 @@ export function ReminderScheduleEditorModal({
                   </Pressable>
 
                   <Pressable
+                    cssInterop={false}
                     accessibilityRole="button"
                     accessibilityLabel="日時変更を完了"
                     accessibilityState={{ disabled: isSaveDisabled }}
@@ -211,6 +213,7 @@ export function ReminderScheduleEditorModal({
                   <Text style={styles.scheduleLabel}>お知らせ日時</Text>
 
                   <Pressable
+                    cssInterop={false}
                     accessibilityRole="button"
                     accessibilityLabel="日付を変更"
                     accessibilityHint={formatReminderDetailDate(datePickerValue)}
@@ -238,6 +241,7 @@ export function ReminderScheduleEditorModal({
 
                   {!draft.allDay ? (
                     <Pressable
+                      cssInterop={false}
                       accessibilityRole="button"
                       accessibilityLabel="時刻を変更"
                       accessibilityHint={formatReminderDetailTime(timePickerValue)}
