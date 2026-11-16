@@ -305,12 +305,20 @@ describe('SettingsScreen raise-to-speak setup', () => {
 
   it('explains automatic deletion and exposes its current state accessibly', async () => {
     const view = await render(<SettingsScreen />);
-    expect(view.getByText('予定日を過ぎた泡を、アプリ起動時などに削除')).toBeOnTheScreen();
+    expect(
+      view.getByText(
+        '時刻を過ぎた泡を自動整理し、次にホームを開いたときに案内します。内容は確認するまで端末に残ります。',
+      ),
+    ).toBeOnTheScreen();
     await fireEvent(view.getByLabelText('自動消滅'), 'valueChange', false);
     await waitFor(() =>
       expect(mockSettingsUpdate).toHaveBeenCalledWith({ autoDeleteEnabled: false }),
     );
-    expect(view.getByText('泡を残す')).toBeOnTheScreen();
+    expect(
+      view.getByText(
+        '時刻を過ぎた泡は「過ぎた予定」に残ります。ホームやWidgetの入口から見返せます。',
+      ),
+    ).toBeOnTheScreen();
     view.unmount();
   });
 

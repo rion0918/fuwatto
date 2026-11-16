@@ -47,6 +47,7 @@ export async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
         renderWidget: ({ width, height }) => (
           <PopReminderWidget
             reminders={snapshot.reminders}
+            pastReminderCount={snapshot.pastReminderCount}
             theme={snapshot.theme}
             widgetWidth={width}
             widgetHeight={height}

@@ -179,15 +179,19 @@ export function SettingsAutoDeletePreview({ enabled }: { enabled: boolean }) {
     <View>
       <View
         style={styles.illustration}
-        accessibilityLabel={enabled ? '予定日を過ぎると泡を削除' : '予定日を過ぎても泡を保持'}
+        accessibilityLabel={
+          enabled
+            ? '時刻を過ぎた泡を空へ送り出し、次の起動で内容を案内'
+            : '時刻を過ぎた泡は過ぎた予定に保持'
+        }
       >
         <View style={styles.step}>
           <PreviewBubble color={appThemes.lavender.accentSoft} size={34} />
-          <Text style={styles.hint}>予定日</Text>
+          <Text style={styles.hint}>予定</Text>
         </View>
         <View style={styles.step}>
           <Ionicons name="arrow-forward" size={18} color={palette.inkSecondary} />
-          <Text style={styles.hint}>日付が変わる</Text>
+          <Text style={styles.hint}>時刻を過ぎる</Text>
         </View>
         <View style={styles.step}>
           {enabled ? (
@@ -197,10 +201,14 @@ export function SettingsAutoDeletePreview({ enabled }: { enabled: boolean }) {
           ) : (
             <PreviewBubble color={appThemes.lavender.accentSoft} size={34} />
           )}
-          <Text style={styles.hint}>{enabled ? '泡が消える' : '泡を残す'}</Text>
+          <Text style={styles.hint}>{enabled ? '空へかえる' : '別の場所へ'}</Text>
         </View>
       </View>
-      <Text style={styles.caption}>予定日を過ぎた泡を、アプリ起動時などに削除</Text>
+      <Text style={styles.caption}>
+        {enabled
+          ? '時刻を過ぎた泡を自動整理し、次にホームを開いたときに案内します。内容は確認するまで端末に残ります。'
+          : '時刻を過ぎた泡は「過ぎた予定」に残ります。ホームやWidgetの入口から見返せます。'}
+      </Text>
     </View>
   );
 }

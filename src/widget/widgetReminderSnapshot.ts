@@ -19,6 +19,7 @@ export type WidgetReminder = {
 
 export type WidgetSnapshot = {
   reminders: WidgetReminder[];
+  pastReminderCount: number;
   theme: AppTheme;
 };
 
@@ -55,11 +56,7 @@ function getWidgetDb(): SQLite.SQLiteDatabase {
   return widgetDb;
 }
 
-function getReminders(
-  db: SQLite.SQLiteDatabase,
-  now: Date,
-  includeExpired: boolean,
-): WidgetReminder[] {
+function getReminders(db: SQLite.SQLiteDatabase, now: Date): WidgetReminder[] {
   const nowIso = now.toISOString();
   const todayStart = startOfLocalDay(now);
   const todayStartIso = todayStart.toISOString();
@@ -72,31 +69,15 @@ function getReminders(
      ORDER BY target_at ASC`,
     [nowIso, todayStartIso, tomorrowStartIso],
   );
-  const rows = includeExpired
-    ? db.getAllSync<ReminderRow>(
-        `SELECT id, title, all_day, target_at, target_notify_at, expires_at, status
-         FROM reminders
-         WHERE ((status = 'active' AND expires_at > ?)
-            OR status = 'expired'
-            OR (status = 'active' AND expires_at <= ?))
-           AND NOT (status = 'active' AND expires_at > ? AND all_day <> 0
-             AND target_at >= ? AND target_at < ?)
-         ORDER BY
-           CASE WHEN status = 'active' AND expires_at > ? THEN 0 ELSE 1 END ASC,
-           CASE WHEN status = 'active' AND expires_at > ? THEN target_at END ASC,
-           CASE WHEN status = 'expired' OR expires_at <= ? THEN target_at END DESC
-         LIMIT 20`,
-        [nowIso, nowIso, nowIso, todayStartIso, tomorrowStartIso, nowIso, nowIso, nowIso],
-      )
-    : db.getAllSync<ReminderRow>(
-        `SELECT id, title, all_day, target_at, target_notify_at, expires_at, status
+  const rows = db.getAllSync<ReminderRow>(
+    `SELECT id, title, all_day, target_at, target_notify_at, expires_at, status
          FROM reminders
          WHERE status = 'active' AND expires_at > ?
            AND NOT (all_day <> 0 AND target_at >= ? AND target_at < ?)
          ORDER BY target_at ASC
          LIMIT 20`,
-        [nowIso, todayStartIso, tomorrowStartIso],
-      );
+    [nowIso, todayStartIso, tomorrowStartIso],
+  );
 
   return [...todayAllDayRows, ...rows].map((row) => ({
     id: row.id,
@@ -133,7 +114,14 @@ export async function getWidgetSnapshot(now = new Date()): Promise<WidgetSnapsho
     const settings = getSettings(db);
 
     return {
-      reminders: getReminders(db, now, !settings.autoDeleteEnabled),
+      reminders: getReminders(db, now),
+      pastReminderCount: settings.autoDeleteEnabled
+        ? 0
+        : (db.getFirstSync<{ count: number }>(
+            `SELECT COUNT(*) AS count FROM reminders
+         WHERE status = 'expired' OR (status = 'active' AND expires_at <= ?)`,
+            [now.toISOString()],
+          )?.count ?? 0),
       theme: settings.theme,
     };
   } catch (error) {

@@ -28,7 +28,7 @@ const reminders = [
   },
 ];
 
-test('native widget prioritizes the nearest reminder and one full-width quick-add target', async () => {
+test('native widget separates retained past reminders from the next plan and gives both footer actions', async () => {
   const view = await render(
     <PopReminderWidget reminders={reminders} widgetWidth={360} widgetHeight={320} />,
   );
@@ -38,23 +38,36 @@ test('native widget prioritizes the nearest reminder and one full-width quick-ad
   expect(title.props.style.fontSize).toBe(34);
   expect(title.props.style.adjustsFontSizeToFit).not.toBe(true);
   expect(view.queryByLabelText(/を削除/)).toBeNull();
-  expect(view.getByText(/期限済み.*2020/)).toBeTruthy();
+  expect(view.queryByText(reminders[1].title)).toBeNull();
+  expect(view.getByLabelText('過ぎた予定、1件を開く').props.clickActionData).toEqual({
+    uri: 'popreminder://?action=past',
+  });
   const detail = view.getByLabelText(new RegExp(`${reminders[0].title}.*詳細を開く`));
   expect(detail.props.clickActionData).toEqual({ uri: 'popreminder://?action=view&id=first' });
   const add = view.getByLabelText('リマインダーを追加');
-  expect(view.getByText('追加する')).toBeTruthy();
-  expect(add.props.style.width).toBe(324);
+  expect(view.getByText('＋')).toBeTruthy();
+  expect(add.props.style.width).toBe(72);
   expect(add.props.style.height).toBeGreaterThanOrEqual(48);
   expect(add.props.clickActionData).toEqual({ uri: 'popreminder://?action=add' });
 });
 
 test('native empty state provides a single clear add target', async () => {
   const view = await render(<PopReminderWidget reminders={[]} />);
-  expect(view.getByText('リマインダーはありません')).toBeTruthy();
+  expect(view.getByText('これからの予定はありません')).toBeTruthy();
   expect(view.getByText('追加する')).toBeTruthy();
   expect(view.getByLabelText('リマインダーを追加').props.clickActionData).toEqual({
     uri: 'popreminder://?action=add',
   });
+});
+
+test('past-only widget shows a review count rather than presenting an expired plan as next', async () => {
+  const view = await render(
+    <PopReminderWidget reminders={[reminders[1]]} pastReminderCount={37} />,
+  );
+  expect(view.queryByText('次のリマインド')).toBeNull();
+  expect(view.queryByText(reminders[1].title)).toBeNull();
+  expect(view.getByText('これからの予定はありません')).toBeTruthy();
+  expect(view.getByLabelText('過ぎた予定、37件を開く')).toBeTruthy();
 });
 
 test('native widget keeps compact focus and limits expanded reminders without claiming a database total', async () => {

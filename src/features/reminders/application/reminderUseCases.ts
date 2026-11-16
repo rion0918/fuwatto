@@ -793,6 +793,10 @@ export function createReminderUseCases(dependencies: ReminderApplicationDependen
       };
     },
 
+    listDepartureNotices: reminders.listDepartureNotices,
+
+    acknowledgeDepartureNotices: reminders.acknowledgeDepartureNotices,
+
     async cleanup(now = new Date()) {
       const [currentSettings, expiredReminders] = await Promise.all([
         settings.get(),
@@ -804,14 +808,18 @@ export function createReminderUseCases(dependencies: ReminderApplicationDependen
       const remindersToRemove = [...expiredReminders, ...retainedExpiredReminders];
       if (remindersToRemove.length === 0) return 0;
 
+      let cleanedCount = remindersToRemove.length;
       if (currentSettings.autoDeleteEnabled) {
         await Promise.all(remindersToRemove.map((reminder) => notifications.cancel(reminder)));
-        await reminders.deleteMany(remindersToRemove.map((reminder) => reminder.id));
+        cleanedCount = await reminders.deleteExpiredWithNotice(
+          remindersToRemove.map((reminder) => reminder.id),
+          now,
+        );
       } else {
         await Promise.all(expiredReminders.map((reminder) => reminders.markExpired(reminder.id)));
       }
       await widget.sync();
-      return remindersToRemove.length;
+      return cleanedCount;
     },
   };
 }

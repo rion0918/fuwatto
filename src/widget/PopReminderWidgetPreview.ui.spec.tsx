@@ -25,7 +25,7 @@ test('compact widget preview promotes the first reminder and keeps production ca
 test('empty widget preview exposes the native widget empty state', async () => {
   const view = await render(<PopReminderWidgetPreview reminders={[]} />);
 
-  expect(view.getByText('リマインダーはありません')).toBeTruthy();
+  expect(view.getByText('これからの予定はありません')).toBeTruthy();
   expect(view.getByText('追加する')).toBeTruthy();
 });
 
@@ -44,11 +44,11 @@ test('preview accepts every persisted widget theme', async () => {
   }
 });
 
-test('preview truncates long titles without shrinking and labels expired reminders', async () => {
+test('preview truncates active titles without shrinking and moves expired reminders into their own entry', async () => {
   const reminder = {
     ...reminders[0],
     title: '日本語の長いリマインダーも小さくせず一行で省略する予定',
-    isExpired: true,
+    isExpired: false,
   };
   const view = await render(
     <PopReminderWidgetPreview reminders={[reminder]} widgetWidth={360} widgetHeight={280} />,
@@ -57,7 +57,16 @@ test('preview truncates long titles without shrinking and labels expired reminde
   expect(title.props.numberOfLines).toBe(1);
   expect(title.props.adjustsFontSizeToFit).not.toBe(true);
   expect(title.props.style.fontSize).toBeGreaterThanOrEqual(14);
-  expect(view.getByText(/期限済み/)).toBeTruthy();
+  await view.rerender(
+    <PopReminderWidgetPreview
+      reminders={[{ ...reminder, isExpired: true }]}
+      widgetWidth={360}
+      widgetHeight={280}
+    />,
+  );
+  expect(view.queryByText(reminder.title)).toBeNull();
+  expect(view.queryByText('次のリマインド')).toBeNull();
+  expect(view.getByLabelText('過ぎた予定、1件を開く')).toBeTruthy();
 });
 
 test('compact preview matches the native timed hero and all-day summary', async () => {

@@ -28,6 +28,7 @@ export type WidgetPreviewReminder = {
 
 export type PopReminderWidgetPreviewProps = {
   reminders: WidgetPreviewReminder[];
+  pastReminderCount?: number;
   theme?: AppTheme;
   widgetWidth?: number;
   widgetHeight?: number;
@@ -47,7 +48,7 @@ function ReminderPreview({
   highlighted: boolean;
 }) {
   const typography = getWidgetTypography(mode);
-  const timeText = `${reminder.isExpired ? '期限済み · ' : ''}${formatReminderBubbleDateTime(reminder.targetAt, new Date(), reminder.allDay)}`;
+  const timeText = formatReminderBubbleDateTime(reminder.targetAt, new Date(), reminder.allDay);
   if (!highlighted) {
     return (
       <View
@@ -154,11 +155,18 @@ function ReminderPreview({
 
 export function PopReminderWidgetPreview({
   reminders,
+  pastReminderCount,
   theme = 'lavender',
   widgetWidth = WIDGET_DEFAULT_WIDTH,
   widgetHeight = WIDGET_DEFAULT_HEIGHT,
 }: PopReminderWidgetPreviewProps) {
-  const plan = getWidgetLayoutPlan(reminders, widgetWidth, widgetHeight);
+  const plan = getWidgetLayoutPlan(
+    reminders,
+    widgetWidth,
+    widgetHeight,
+    new Date(),
+    pastReminderCount,
+  );
   const colors = getWidgetTheme(theme);
   const typography = getWidgetTypography(plan.mode);
   const remindersById = new Map(reminders.map((reminder) => [reminder.id, reminder]));
@@ -201,7 +209,7 @@ export function PopReminderWidgetPreview({
         >
           ふわっと。
         </Text>
-        {reminders.length > 0 ? (
+        {plan.hero ? (
           <Text
             numberOfLines={1}
             allowFontScaling={false}
@@ -253,7 +261,7 @@ export function PopReminderWidgetPreview({
           </Text>
         </View>
       ) : null}
-      {reminders.length === 0 ? (
+      {!plan.hero ? (
         <View
           style={[
             styles.emptyState,
@@ -275,7 +283,32 @@ export function PopReminderWidgetPreview({
               textAlign: 'center',
             }}
           >
-            リマインダーはありません
+            これからの予定はありません
+          </Text>
+        </View>
+      ) : null}
+      {plan.pastSummary ? (
+        <View
+          accessibilityLabel={`過ぎた予定、${plan.pastSummary.count}件を開く`}
+          style={{
+            position: 'absolute',
+            left: plan.pastSummary.left,
+            top: plan.pastSummary.top,
+            width: plan.pastSummary.width,
+            height: plan.pastSummary.height,
+            borderRadius: 18,
+            borderWidth: 1,
+            borderColor: colors.surfaceBorder,
+            justifyContent: 'center',
+            paddingHorizontal: 10,
+          }}
+        >
+          <Text
+            numberOfLines={1}
+            allowFontScaling={false}
+            style={{ fontFamily: WIDGET_FONT_FAMILY, fontSize: 13, color: colors.secondaryText }}
+          >
+            {`過ぎた予定  ${plan.pastSummary.count}件 ›`}
           </Text>
         </View>
       ) : null}
@@ -312,21 +345,23 @@ export function PopReminderWidgetPreview({
         />
         <Ionicons
           name="add-outline"
-          size={24}
+          size={plan.addButton.width < 100 ? 30 : 24}
           color={colors.addButtonText}
-          style={{ marginRight: 6 }}
+          style={{ marginRight: plan.addButton.width < 100 ? 0 : 6 }}
         />
-        <Text
-          allowFontScaling={false}
-          style={{
-            fontFamily: WIDGET_FONT_FAMILY,
-            fontSize: typography.addFontSize,
-            fontWeight: '600',
-            color: colors.addButtonText,
-          }}
-        >
-          追加する
-        </Text>
+        {plan.addButton.width >= 100 ? (
+          <Text
+            allowFontScaling={false}
+            style={{
+              fontFamily: WIDGET_FONT_FAMILY,
+              fontSize: typography.addFontSize,
+              fontWeight: '600',
+              color: colors.addButtonText,
+            }}
+          >
+            追加する
+          </Text>
+        ) : null}
       </View>
     </View>
   );

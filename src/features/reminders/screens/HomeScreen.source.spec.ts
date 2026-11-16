@@ -24,7 +24,7 @@ test('home gates the seventh active reminder before opening quick add', () => {
     includes: [
       /FREE_ACTIVE_REMINDER_LIMIT/,
       /activeReminderCount >= FREE_ACTIVE_REMINDER_LIMIT/,
-      /reminder\.status === 'active'/,
+      /const activeReminderCount = upcomingReminders\.length;/,
       /purchases\.getProAccessState\(\)/,
       /analytics\.captureProGateReached\(\{ source \}\)/,
       /purchases\.presentProPaywallIfNeeded\(\)/,
@@ -106,7 +106,7 @@ test('raise-to-speak enters voice quick add only after the shared Pro gate succe
 
 test('home replaces bottom controls with the add bubble only for a settled empty query', () => {
   assertSourceIncludes(source, [
-    /const isEmptyHome = !loading && !error && reminders\.length === 0;/,
+    /const isEmptyHome = !loading && !error && upcomingReminders\.length === 0;/,
     /styles\.bubbleBoardContainer,[\s\S]*isEmptyHome \? styles\.bubbleBoardContainerEmpty : null/,
     /onEmptyPress=\{handlePressAdd\}/,
     /emptyDisabled=\{isAddButtonDisabled\}/,
@@ -151,7 +151,7 @@ test('home presents the next reminder as a compact bubble card that opens its de
 
   assertSourceIncludes(source, [
     /const reminderDetailBubbles = require\(['"]\.\.\/\.\.\/\.\.\/\.\.\/assets\/reminder-detail-bubbles\.png['"]\);/,
-    /const nextReminder = reminders\.find\(\(reminder\) => !reminder\.allDay\) \?\? null;/,
+    /const nextReminder = upcomingReminders\.find\(\(reminder\) => !reminder\.allDay\) \?\? null;/,
     /const nextReminderLabel = nextReminder[\s\S]*formatReminderBubbleDateTime\(nextReminder\.targetAt,/,
     /const nextReminderAccessibilityLabel = nextReminder[\s\S]*formatReminderDetailAccessibilityDateTime\(nextReminder\.targetAt,/,
   ]);
@@ -169,7 +169,7 @@ test('home presents the next reminder as a compact bubble card that opens its de
       /resizeMode="cover"/,
       /styles\.nextReminderBackground/,
       /name="notifications-outline"/,
-      /nextReminderIsExpired \? '期限済み' : '次のリマインド'/,
+      /次のリマインド/,
       /numberOfLines=\{1\}[\s\S]*ellipsizeMode="tail"[\s\S]*\{nextReminder\.title\}/,
       /numberOfLines=\{1\}[\s\S]*\{nextReminderLabel\}/,
     ],
@@ -349,9 +349,9 @@ test('home supports long-press multi-selection and sequential bulk deletion', ()
     /disabled=\{isSelectionMode \|\| isSelectionBusy\}/,
     /isSelectionMode \? styles\.nextReminderCardInactive : null/,
     /isSelectionMode \? '選択モードを閉じる' : '設定を開く'/,
-    /const allRemindersSelected = reminders\.length > 0 && selectedCount === reminders\.length;/,
+    /const allRemindersSelected =\s*upcomingReminders\.length > 0 && selectedCount === upcomingReminders\.length;/,
     /allSelected=\{allRemindersSelected\}/,
-    /new Set\(reminders\.map\(\(reminder\) => reminder\.id\)\)/,
+    /new Set\(upcomingReminders\.map\(\(reminder\) => reminder\.id\)\)/,
     /const visibleMotions = motions\.filter\(\(motion\) =>[\s\S]*visibleReminderIds\.has\(motion\.reminderId\)/,
     /visibleMotions\.map\(\(motion\) => waitForDeleteMotion/,
   ]);

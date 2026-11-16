@@ -5,6 +5,7 @@ import { createDeepLinkIntentBuffer, parseDeepLinkIntent } from './deepLinkInten
 
 test('widget URLs map to stable route intents', () => {
   assert.deepEqual(parseDeepLinkIntent('popreminder://?action=add'), { action: 'add' });
+  assert.deepEqual(parseDeepLinkIntent('popreminder://?action=past'), { action: 'past' });
   assert.deepEqual(parseDeepLinkIntent('popreminder://?action=view&id=abc%20123'), {
     action: 'view',
     id: 'abc 123',

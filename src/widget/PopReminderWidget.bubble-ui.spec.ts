@@ -23,7 +23,8 @@ test('android widget promotes the nearest reminder and renders the rest as a que
   assertSourceContract(source, {
     includes: [
       /function ReminderRow/,
-      /reminder\.isExpired \? '期限済み · ' : ''/,
+      /plan\.pastSummary/,
+      /action=past/,
       /layout\.reminderId/,
       /rows\.map/,
       /formatReminderBubbleDateTime/,
@@ -78,7 +79,7 @@ test('widget uses theme-aware lightweight material without bitmap scenery', () =
 test('empty widget keeps the same persistent quick-add action', () => {
   assertSourceIncludes(source, [
     /function EmptyState/,
-    /text="リマインダーはありません"/,
+    /text="これからの予定はありません"/,
     /text="追加する"/,
     /accessibilityLabel="リマインダーを追加"/,
     /<EmptyState bounds=\{plan\.queueBounds\} theme=\{colors\} \/>/,
@@ -164,7 +165,8 @@ test('native periodic updates respect auto-delete while the app is closed', () =
   assertSourceIncludes(snapshotSource, [
     /autoDeleteEnabled/,
     /auto_delete_enabled/,
-    /includeExpired/,
+    /pastReminderCount/,
+    /SELECT COUNT\(\*\) AS count/,
     /status = 'expired'/,
     /expires_at <= \?/,
     /ORDER BY/,

@@ -17,6 +17,13 @@ export const reminders = sqliteTable('reminders', {
   updatedAt: text('updated_at').notNull(),
 });
 
+export const reminderDepartures = sqliteTable('reminder_departures', {
+  id: text('id').primaryKey(),
+  title: text('title').notNull(),
+  allDay: integer('all_day', { mode: 'boolean' }).notNull().default(false),
+  targetAt: text('target_at').notNull(),
+});
+
 export const appSettings = sqliteTable('app_settings', {
   id: text('id').primaryKey(),
   previousNotifyTime: text('previous_notify_time').notNull().default('20:00'),

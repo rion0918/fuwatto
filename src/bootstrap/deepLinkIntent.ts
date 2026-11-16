@@ -1,4 +1,4 @@
-export type DeepLinkIntent = { action: 'add' } | { action: 'view'; id: string };
+export type DeepLinkIntent = { action: 'add' | 'past' } | { action: 'view'; id: string };
 
 export function parseDeepLinkIntent(url: string): DeepLinkIntent | null {
   const queryStart = url.indexOf('?');
@@ -6,7 +6,7 @@ export function parseDeepLinkIntent(url: string): DeepLinkIntent | null {
 
   const params = new URLSearchParams(url.slice(queryStart + 1));
   const action = params.get('action');
-  if (action === 'add') return { action };
+  if (action === 'add' || action === 'past') return { action };
 
   const id = params.get('id');
   if (action === 'view' && id) return { action, id };

@@ -1,7 +1,7 @@
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 import { AppState, BackHandler, Linking, Platform, type AppStateStatus } from 'react-native';
 
-import type { Reminder } from '../domain/reminder';
+import type { Reminder, ReminderDepartureNotice } from '../domain/reminder';
 import { useReminderUiStore as mockUseReminderUiStore } from '../stores/reminderUiStore';
 import type { AppSettings, UpdateAppSettingsInput } from '../../settings/domain/appSettings';
 
@@ -23,6 +23,9 @@ const mockRaiseToSpeakPrepare = jest.fn();
 const mockRefreshReminders = jest.fn(async () => ({ data: mockReminders, error: null }));
 
 let mockReminders: Reminder[] = [];
+let mockBoardReminders: Reminder[] = [];
+let mockDepartureNotices: ReminderDepartureNotice[] = [];
+let mockDepartureSheetVisible = false;
 let mockSettingsState: AppSettings | undefined;
 let mockSettingsUpdateImpl: ((patch: UpdateAppSettingsInput) => Promise<void>) | null = null;
 const mockSettingsUpdate = jest.fn();
@@ -183,6 +186,11 @@ jest.mock('../../settings/presentation/useAppSettingsQuery', () => {
 
 jest.mock('../presentation/useRemindersQuery', () => ({
   useRemindersQuery: () => ({
+    departureNotices: mockDepartureNotices,
+    departureNoticeError: null,
+    refreshDepartureNotices: jest.fn(),
+    acknowledgeDepartureNotices: jest.fn(),
+    isAcknowledgingDepartures: false,
     reminders: mockReminders,
     loading: false,
     error: null,
@@ -227,7 +235,17 @@ jest.mock('../../../shared/components/AppScreen', () => {
 });
 
 jest.mock('../components/ReminderBubbleBoard', () => ({
-  ReminderBubbleBoard: () => null,
+  ReminderBubbleBoard: ({ reminders }: { reminders: Reminder[] }) => {
+    mockBoardReminders = reminders;
+    return null;
+  },
+}));
+
+jest.mock('../components/ReminderDepartureSheet', () => ({
+  ReminderDepartureSheet: ({ visible }: { visible: boolean }) => {
+    mockDepartureSheetVisible = visible;
+    return null;
+  },
 }));
 
 jest.mock('../components/ReminderInputSheet', () => ({
@@ -269,6 +287,8 @@ describe('HomeScreen first-run raise-to-speak onboarding', () => {
     mockBackListeners = new Set();
     mockAnalyticsConfigured = true;
     mockReminders = [];
+    mockDepartureNotices = [];
+    mockDepartureSheetVisible = false;
     mockSettingsState = makeSettings();
     mockSettingsUpdateImpl = null;
     mockRaiseGestureOptions = null;
@@ -500,6 +520,98 @@ describe('HomeScreen first-run raise-to-speak onboarding', () => {
     await waitFor(() => {
       expect(view.getByTestId('quick-add-open')).toBeOnTheScreen();
     });
+  });
+
+  it('keeps past reminders outside the floating board and opens them through their own entry', async () => {
+    mockSettingsState = makeSettings({
+      autoDeleteEnabled: false,
+      raiseToSpeakOnboardingCompleted: true,
+    });
+    const future: Reminder = {
+      id: 'future',
+      title: 'これからの予定',
+      targetAt: '2035-05-13T10:00:00.000Z',
+      expiresAt: '2035-05-13T10:00:00.000Z',
+      previousNotifyAt: '2035-05-12T20:00:00.000Z',
+      targetNotifyAt: '2035-05-13T10:00:00.000Z',
+      previousNotificationId: null,
+      targetNotificationId: null,
+      status: 'active',
+      createdAt: '',
+      updatedAt: '',
+    };
+    mockReminders = [
+      future,
+      { ...future, id: 'past', title: '過去の予定', status: 'expired' },
+      {
+        ...future,
+        id: 'crossed',
+        title: '時刻を過ぎた予定',
+        expiresAt: '2000-01-01T00:00:00.000Z',
+      },
+    ];
+    const view = await render(<HomeScreen />);
+    expect(mockBoardReminders.map((item) => item.id)).toEqual(['future']);
+    await fireEvent.press(view.getByLabelText('過ぎた予定、2件を開く'));
+    expect(mockRouter.push).toHaveBeenCalledWith({
+      pathname: '/reminders-list',
+      params: { filter: 'past' },
+    });
+  });
+
+  it('does not promote an expired reminder into the next reminder card when there are no upcoming plans', async () => {
+    mockSettingsState = makeSettings({
+      autoDeleteEnabled: false,
+      raiseToSpeakOnboardingCompleted: true,
+    });
+    mockReminders = [
+      {
+        id: 'past',
+        title: '過去の予定',
+        targetAt: '2000-01-01T10:00:00.000Z',
+        expiresAt: '2000-01-01T10:00:00.000Z',
+        previousNotifyAt: '',
+        targetNotifyAt: '',
+        previousNotificationId: null,
+        targetNotificationId: null,
+        status: 'expired',
+        createdAt: '',
+        updatedAt: '',
+      },
+    ];
+    const view = await render(<HomeScreen />);
+    expect(mockBoardReminders).toEqual([]);
+    expect(view.queryByText('次のリマインド')).toBeNull();
+    expect(view.queryByText('期限済み')).toBeNull();
+    expect(view.getByLabelText('過ぎた予定、1件を開く')).toBeOnTheScreen();
+  });
+
+  it('explains departed titles on the first home screen and opens their confirmation without blocking add', async () => {
+    mockSettingsState = makeSettings({ raiseToSpeakOnboardingCompleted: true });
+    mockDepartureNotices = [
+      { id: 'first', title: '観葉植物に水をあげる', targetAt: '2000-01-01T10:00:00.000Z' },
+      { id: 'second', title: '映画のチケットを取る', targetAt: '2000-01-01T09:00:00.000Z' },
+    ];
+    const view = await render(<HomeScreen />);
+    expect(view.getByText('空へかえった泡')).toBeOnTheScreen();
+    expect(view.getByText('観葉植物に水をあげる ほか1件')).toBeOnTheScreen();
+    expect(mockDepartureSheetVisible).toBe(false);
+    await fireEvent.press(view.getByLabelText('空へかえった泡、2件を開く'));
+    expect(mockDepartureSheetVisible).toBe(true);
+    expect(mockRaiseGestureOptions?.blocked).toBe(true);
+  });
+
+  it('opens the past reminder view from a widget only after onboarding completes', async () => {
+    mockRouteParams = { action: 'past', intent: 'past-1' };
+    const view = await render(<HomeScreen />);
+    expect(mockRouter.push).not.toHaveBeenCalled();
+    await fireEvent.press(view.getByText('オフのままはじめる'));
+    await waitFor(() =>
+      expect(mockRouter.push).toHaveBeenCalledWith({
+        pathname: '/reminders-list',
+        params: { filter: 'past' },
+      }),
+    );
   });
 
   it('defers widget view deep link until onboarding closes', async () => {

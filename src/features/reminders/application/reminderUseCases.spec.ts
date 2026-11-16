@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import type { Reminder } from '../domain/reminder';
+import type { Reminder, ReminderDepartureNotice } from '../domain/reminder';
 import type { ReminderApplicationDependencies } from './ports';
 import {
   ActiveReminderLimitReachedError,
@@ -48,6 +48,7 @@ function makeDependencies(events: string[]): ReminderApplicationDependencies {
   let previousNotifyTime = '20:00';
   let allDayNotifyTime = '09:00';
   let notificationChannelMigrationVersion = 0;
+  let departureNotices: ReminderDepartureNotice[] = [];
 
   return {
     reminders: {
@@ -88,6 +89,17 @@ function makeDependencies(events: string[]): ReminderApplicationDependencies {
       },
       markExpired: async () => {
         events.push('mark-expired');
+      },
+      deleteExpiredWithNotice: async () => {
+        events.push('delete-expired-with-notice');
+        const count = current ? 1 : 0;
+        if (current) departureNotices.push(current);
+        current = null;
+        return count;
+      },
+      listDepartureNotices: async () => departureNotices,
+      acknowledgeDepartureNotices: async (ids) => {
+        departureNotices = departureNotices.filter((item) => !ids.includes(item.id));
       },
       deleteMany: async () => {
         events.push('delete-many');
@@ -1234,14 +1246,14 @@ test('past all-day notification times are skipped and are not left pending for r
   assert.deepEqual(retryResult, { scheduled: 0, remaining: 0 });
 });
 
-test('cleanup cancels expired reminders before deleting them', async () => {
+test('cleanup cancels expired reminders before atomically recording their departure and deleting them', async () => {
   const events: string[] = [];
   const result = await createReminderUseCases(makeDependencies(events)).cleanup(
     new Date('2026-07-15T00:00:00.000Z'),
   );
 
   assert.equal(result, 1);
-  assert.deepEqual(events, ['cancel', 'delete-many', 'widget']);
+  assert.deepEqual(events, ['cancel', 'delete-expired-with-notice', 'widget']);
 });
 
 test('legacy silent-channel notifications are migrated once without duplicating them', async () => {
@@ -1754,5 +1766,15 @@ test('cleanup deletes reminders retained while auto-delete was disabled after it
   );
 
   assert.equal(result, 1);
-  assert.deepEqual(events, ['cancel', 'delete-many', 'widget']);
+  assert.deepEqual(events, ['cancel', 'delete-expired-with-notice', 'widget']);
+});
+
+test('automatic cleanup exposes the departed titles until explicitly acknowledged', async () => {
+  const useCases = createReminderUseCases(makeDependencies([]));
+  await useCases.cleanup(new Date('2026-07-15T00:00:00.000Z'));
+  assert.equal((await useCases.listDepartureNotices())[0]?.title, reminder.title);
+  await useCases.cleanup(new Date('2026-07-15T01:00:00.000Z'));
+  assert.equal((await useCases.listDepartureNotices()).length, 1);
+  await useCases.acknowledgeDepartureNotices([reminder.id]);
+  assert.deepEqual(await useCases.listDepartureNotices(), []);
 });
