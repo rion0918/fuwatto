@@ -11,12 +11,14 @@ const themeLabels: Record<AppTheme, string> = {
   mint: 'ブリーズ',
 };
 
-export function SettingsSection({ title, children }: PropsWithChildren<{ title: string }>) {
+export function SettingsSection({ title, children }: PropsWithChildren<{ title?: string }>) {
   return (
     <View style={styles.section}>
-      <Text accessibilityRole="header" style={styles.heading}>
-        {title}
-      </Text>
+      {title ? (
+        <Text accessibilityRole="header" style={styles.heading}>
+          {title}
+        </Text>
+      ) : null}
       {children}
     </View>
   );
@@ -174,45 +176,6 @@ export function SettingsNotificationTimeline({
   );
 }
 
-export function SettingsAutoDeletePreview({ enabled }: { enabled: boolean }) {
-  return (
-    <View>
-      <View
-        style={styles.illustration}
-        accessibilityLabel={
-          enabled
-            ? '時刻を過ぎた泡を空へ送り出し、次の起動で内容を案内'
-            : '時刻を過ぎた泡は過ぎた予定に保持'
-        }
-      >
-        <View style={styles.step}>
-          <PreviewBubble color={appThemes.lavender.accentSoft} size={34} />
-          <Text style={styles.hint}>予定</Text>
-        </View>
-        <View style={styles.step}>
-          <Ionicons name="arrow-forward" size={18} color={palette.inkSecondary} />
-          <Text style={styles.hint}>時刻を過ぎる</Text>
-        </View>
-        <View style={styles.step}>
-          {enabled ? (
-            <View style={styles.emptyBubble}>
-              <Ionicons name="sparkles-outline" size={18} color={palette.inkSecondary} />
-            </View>
-          ) : (
-            <PreviewBubble color={appThemes.lavender.accentSoft} size={34} />
-          )}
-          <Text style={styles.hint}>{enabled ? '空へかえる' : '別の場所へ'}</Text>
-        </View>
-      </View>
-      <Text style={styles.caption}>
-        {enabled
-          ? '時刻を過ぎた泡を自動整理し、次にホームを開いたときに案内します。内容は確認するまで端末に残ります。'
-          : '時刻を過ぎた泡は「過ぎた予定」に残ります。ホームやWidgetの入口から見返せます。'}
-      </Text>
-    </View>
-  );
-}
-
 export function SettingsVoicePreview({ enabled }: { enabled: boolean }) {
   return (
     <View style={styles.voicePreview}>
@@ -338,29 +301,6 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   currentDay: { flex: 1, alignItems: 'center', gap: 6 },
-  illustration: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 10,
-    borderRadius: 16,
-    backgroundColor: palette.cloud,
-    borderWidth: 1,
-    borderColor: palette.line,
-    gap: 6,
-  },
-  step: { flex: 1, alignItems: 'center', gap: 8 },
-  emptyBubble: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: palette.controlLine,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   caption: {
     color: palette.inkSecondary,
     fontSize: 13,

@@ -12,6 +12,8 @@ ADR（Architecture Decision Record）は、1つの重要な判断について、
 | [0006: 「傾けてこえメモ」の初回オンボーディング完了フラグを分離し同意モーダル後に全画面練習導線を提示する](0006-raise-to-speak-first-run-onboarding.md) | Proposed | 2026-11-15 |
 | [0007: 期限切れの表示を分離し自動整理の確認内容を端末内に保持する](0007-expired-reminder-review.md)                                                     | Proposed | 2026-11-16 |
 
+| [0008: 過ぎた予定を常に保存しホームの入口を1行にする](0008-retain-past-reminders.md) | Proposed | 2026-11-17 |
+
 Accepted の記録が現在の採用済み判断です。Proposed は提案段階であり、採用済みとして扱いません。記録の追加・状態変更時には、この一覧も更新します。
 
 旧0001・0002は刷新時に削除しました。内容はGit履歴に残し、新しい判断の根拠には使いません。番号は再利用せず、次の記録は `0005-<short-title>.md` とします。

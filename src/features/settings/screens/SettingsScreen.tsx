@@ -36,7 +36,6 @@ import {
   SettingsThemePicker,
   SettingsTimeTile,
   SettingsNotificationTimeline,
-  SettingsAutoDeletePreview,
   SettingsVoicePreview,
 } from '../components/SettingsVisuals';
 import { useAppSettingsQuery as useAppSettings } from '../presentation/useAppSettingsQuery';
@@ -78,7 +77,7 @@ type LegalDocument = {
 
 const privacyPolicyDocument: LegalDocument = {
   title: 'プライバシーポリシー',
-  updatedAt: '2026年11月14日',
+  updatedAt: '2026年11月17日',
   sections: [
     {
       title: '1. 基本方針',
@@ -86,7 +85,7 @@ const privacyPolicyDocument: LegalDocument = {
     },
     {
       title: '2. 端末内に保存する情報',
-      body: 'リマインダーの表示・編集・通知・整理のため、タイトル、日時、リマインダーID、通知ID、作成・更新日時、期限・状態を端末内に保存します。テーマ、時刻プリセット、自動整理、音声入力、分析への同意などの設定も保存します。購入管理SDKの識別子・購入状態のキャッシュ、同意後の分析用識別子・未送信イベントも端末内に保存される場合があります。ログイン・アカウント作成機能や、開発者によるリマインダーの外部サーバー同期はありません。OSのバックアップ設定によっては、端末内のデータがバックアップの対象となり、復元される場合があります。バックアップの管理・削除はOSやバックアップサービスの設定から行ってください。',
+      body: 'リマインダーの表示・編集・通知・整理のため、タイトル、日時、リマインダーID、通知ID、作成・更新日時、期限・状態を端末内に保存します。テーマ、時刻プリセット、音声入力、分析への同意などの設定も保存します。購入管理SDKの識別子・購入状態のキャッシュ、同意後の分析用識別子・未送信イベントも端末内に保存される場合があります。ログイン・アカウント作成機能や、開発者によるリマインダーの外部サーバー同期はありません。OSのバックアップ設定によっては、端末内のデータがバックアップの対象となり、復元される場合があります。バックアップの管理・削除はOSやバックアップサービスの設定から行ってください。',
     },
     {
       title: '3. 通知権限とWidget',
@@ -110,7 +109,7 @@ const privacyPolicyDocument: LegalDocument = {
     },
     {
       title: '8. データの削除',
-      body: 'リマインダーはアプリ内やAndroidのWidgetの削除操作で削除できます。自動整理は初期状態でONであり、予定日の終了後、アプリの起動時などの整理処理で期限切れデータを削除します。OFFにした場合は、手動で削除するまで期限切れデータを端末内に保持します。AndroidのOS設定で本アプリのストレージを消去するか、アプリをアンインストールすると、端末内のデータはOSの仕様に従って削除されます。バックアップ上のデータは別途管理が必要で、復元時に戻る場合があります。開発者はリマインダーのコピーを保有していないため、失われたリマインダーを復元できません。分析データの削除は前記の保持期間に従います。購入記録や取引情報には、購入権利の維持と各サービスのポリシー、法令上の保存義務が適用されます。本アプリには独自のユーザーアカウントがないため、アカウント削除機能はありません。データの取り扱いに関する相談は末尾のメールアドレスへご連絡ください。',
+      body: 'リマインダーはアプリ内やAndroidのWidgetの削除操作で削除できます。予定日時を過ぎたリマインダーも、手動で削除するまで端末内に保持します。ホームとWidgetではこれからの予定と分けて表示し、「過ぎた予定」から見返したり日時を変更したりできます。AndroidのOS設定で本アプリのストレージを消去するか、アプリをアンインストールすると、端末内のデータはOSの仕様に従って削除されます。バックアップ上のデータは別途管理が必要で、復元時に戻る場合があります。開発者はリマインダーのコピーを保有していないため、失われたリマインダーを復元できません。分析データの削除は前記の保持期間に従います。購入記録や取引情報には、購入権利の維持と各サービスのポリシー、法令上の保存義務が適用されます。本アプリには独自のユーザーアカウントがないため、アカウント削除機能はありません。データの取り扱いに関する相談は末尾のメールアドレスへご連絡ください。',
     },
     {
       title: '9. 外部サービスと安全管理',
@@ -138,7 +137,7 @@ const termsSections = [
   },
   {
     title: '3. データの取り扱い',
-    body: '登録したリマインダーや設定は、お使いの端末内に保存されます。現時点ではログイン機能や登録データの外部サーバーへの同期はありません。OSのバックアップ設定によっては端末バックアップの対象となり、復元される場合があります。アプリの削除や端末の初期化により、保存データが失われる場合があります。自動整理は初期状態でONであり、予定日の終了後、アプリ起動時などに期限切れデータを削除します。残したい場合は設定画面でOFFにしてください。開発者は削除されたリマインダーを復元できません。詳しくはプライバシーポリシーをご確認ください。',
+    body: '登録したリマインダーや設定は、お使いの端末内に保存されます。現時点ではログイン機能や登録データの外部サーバーへの同期はありません。OSのバックアップ設定によっては端末バックアップの対象となり、復元される場合があります。アプリの削除や端末の初期化により、保存データが失われる場合があります。予定日時を過ぎたリマインダーも、手動で削除するまで端末内に保持します。ホームとWidgetではこれからの予定と分けて表示し、「過ぎた予定」から見返したり日時を変更したりできます。開発者は削除されたリマインダーを復元できません。詳しくはプライバシーポリシーをご確認ください。',
   },
   {
     title: '4. 通知について',
@@ -176,7 +175,7 @@ const termsSections = [
 
 const termsDocument: LegalDocument = {
   title: '利用規約',
-  updatedAt: '2026年9月7日',
+  updatedAt: '2026年11月17日',
   sections: termsSections,
 };
 
@@ -827,26 +826,7 @@ export function SettingsScreen() {
               ))}
             </View>
           </SettingsSection>
-          <SettingsSection title="泡と音声入力">
-            <SettingRow
-              icon="hourglass-outline"
-              title="自動消滅"
-              onPress={() => {
-                void update({ autoDeleteEnabled: !settings.autoDeleteEnabled });
-              }}
-            >
-              <Switch
-                accessibilityLabel="自動消滅"
-                value={settings.autoDeleteEnabled}
-                onValueChange={(value) => {
-                  void update({ autoDeleteEnabled: value });
-                }}
-                trackColor={{ false: '#CBD5E1', true: palette.mintDeep }}
-                thumbColor={palette.white}
-              />
-            </SettingRow>
-            <SettingsAutoDeletePreview enabled={settings.autoDeleteEnabled} />
-            <View style={styles.divider} />
+          <SettingsSection>
             <SettingRow
               icon="mic-outline"
               title="左右に傾けて音声入力"

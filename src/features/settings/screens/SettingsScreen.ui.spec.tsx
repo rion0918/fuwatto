@@ -303,22 +303,12 @@ describe('SettingsScreen raise-to-speak setup', () => {
     view.unmount();
   });
 
-  it('explains automatic deletion and exposes its current state accessibly', async () => {
+  it('keeps voice input unchanged without expiry preferences or the combined heading', async () => {
     const view = await render(<SettingsScreen />);
-    expect(
-      view.getByText(
-        '時刻を過ぎた泡を自動整理し、次にホームを開いたときに案内します。内容は確認するまで端末に残ります。',
-      ),
-    ).toBeOnTheScreen();
-    await fireEvent(view.getByLabelText('自動消滅'), 'valueChange', false);
-    await waitFor(() =>
-      expect(mockSettingsUpdate).toHaveBeenCalledWith({ autoDeleteEnabled: false }),
-    );
-    expect(
-      view.getByText(
-        '時刻を過ぎた泡は「過ぎた予定」に残ります。ホームやWidgetの入口から見返せます。',
-      ),
-    ).toBeOnTheScreen();
+    expect(view.queryByText('泡と音声入力')).toBeNull();
+    expect(view.queryByLabelText('自動消滅')).toBeNull();
+    expect(view.getByLabelText('左右に傾けて音声入力')).toBeOnTheScreen();
+    expect(view.getByText('傾けて音声入力', { exact: true })).toBeOnTheScreen();
     view.unmount();
   });
 

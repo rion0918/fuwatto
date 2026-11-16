@@ -131,7 +131,7 @@ test('settings legal copy supports both Google Play and App Store release pages'
     includes: [
       /Google PlayやApp Storeなどの配布ページ/,
       /body: '「ふわっと。」は/,
-      /updatedAt: '2026年9月7日'/,
+      /updatedAt: '2026年11月17日'/,
       /音声入力とセンサーについて/,
       /音声認識はOS標準の音声認識機能/,
       /開発者が音声、録音、文字起こし、モーション値を保存、分析、収集することはありません/,

@@ -552,6 +552,8 @@ describe('HomeScreen first-run raise-to-speak onboarding', () => {
     ];
     const view = await render(<HomeScreen />);
     expect(mockBoardReminders.map((item) => item.id)).toEqual(['future']);
+    expect(view.getByText('過ぎた予定 2件')).toBeOnTheScreen();
+    expect(view.queryByText('時刻を過ぎた泡を見返す')).toBeNull();
     await fireEvent.press(view.getByLabelText('過ぎた予定、2件を開く'));
     expect(mockRouter.push).toHaveBeenCalledWith({
       pathname: '/reminders-list',

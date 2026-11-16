@@ -92,7 +92,7 @@ test.each([0, 1])(
         isExpired: false,
       });
       expect(snapshot.reminders.some((reminder) => reminder.id === 'tomorrow')).toBe(true);
-      expect(snapshot.pastReminderCount).toBe(autoDeleteEnabled ? 0 : 2);
+      expect(snapshot.pastReminderCount).toBe(2);
       expect(snapshot.reminders.filter((reminder) => reminder.isExpired)).toHaveLength(0);
     } finally {
       database.close();

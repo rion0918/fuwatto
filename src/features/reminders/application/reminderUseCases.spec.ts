@@ -1246,14 +1246,14 @@ test('past all-day notification times are skipped and are not left pending for r
   assert.deepEqual(retryResult, { scheduled: 0, remaining: 0 });
 });
 
-test('cleanup cancels expired reminders before atomically recording their departure and deleting them', async () => {
+test('cleanup retains expired reminders even when legacy auto-delete is enabled', async () => {
   const events: string[] = [];
   const result = await createReminderUseCases(makeDependencies(events)).cleanup(
     new Date('2026-07-15T00:00:00.000Z'),
   );
 
   assert.equal(result, 1);
-  assert.deepEqual(events, ['cancel', 'delete-expired-with-notice', 'widget']);
+  assert.deepEqual(events, ['mark-expired', 'widget']);
 });
 
 test('legacy silent-channel notifications are migrated once without duplicating them', async () => {
@@ -1690,7 +1690,7 @@ test('failed legacy channel cleanup remains pending for retry', async () => {
   ]);
 });
 
-test('listVisible includes retained expired reminders only when auto-delete is disabled', async () => {
+test('listVisible includes retained expired reminders regardless of the legacy preference', async () => {
   const events: string[] = [];
   const dependencies = makeDependencies(events);
   const expiredReminder = { ...reminder, status: 'expired' as const };
@@ -1721,9 +1721,9 @@ test('listVisible includes retained expired reminders only when auto-delete is d
   autoDeleteEnabled = false;
   const retainedResult = await useCases.listVisible(new Date('2026-07-15T00:00:00.000Z'));
 
-  assert.deepEqual(autoDeleteResult, [reminder]);
+  assert.deepEqual(autoDeleteResult, [reminder, expiredReminder]);
   assert.deepEqual(retainedResult, [reminder, expiredReminder]);
-  assert.deepEqual(events, ['list-visible:false', 'list-visible:true']);
+  assert.deepEqual(events, ['list-visible:true', 'list-visible:true']);
 });
 
 test('cleanup retains expired reminders without cancelling notifications when auto-delete is disabled', async () => {
@@ -1753,7 +1753,7 @@ test('cleanup retains expired reminders without cancelling notifications when au
   assert.deepEqual(events, ['mark-expired', 'widget']);
 });
 
-test('cleanup deletes reminders retained while auto-delete was disabled after it is enabled', async () => {
+test('cleanup leaves already retained reminders untouched even with legacy auto-delete enabled', async () => {
   const events: string[] = [];
   const dependencies = makeDependencies(events);
   dependencies.reminders.listExpired = async () => [];
@@ -1765,16 +1765,13 @@ test('cleanup deletes reminders retained while auto-delete was disabled after it
     new Date('2026-07-15T00:00:00.000Z'),
   );
 
-  assert.equal(result, 1);
-  assert.deepEqual(events, ['cancel', 'delete-expired-with-notice', 'widget']);
+  assert.equal(result, 0);
+  assert.deepEqual(events, []);
 });
 
-test('automatic cleanup exposes the departed titles until explicitly acknowledged', async () => {
+test('expiry keeps the original reminder available and does not create deletion notices', async () => {
   const useCases = createReminderUseCases(makeDependencies([]));
   await useCases.cleanup(new Date('2026-07-15T00:00:00.000Z'));
-  assert.equal((await useCases.listDepartureNotices())[0]?.title, reminder.title);
-  await useCases.cleanup(new Date('2026-07-15T01:00:00.000Z'));
-  assert.equal((await useCases.listDepartureNotices()).length, 1);
-  await useCases.acknowledgeDepartureNotices([reminder.id]);
   assert.deepEqual(await useCases.listDepartureNotices(), []);
+  assert.equal((await useCases.listVisible())[0]?.title, reminder.title);
 });

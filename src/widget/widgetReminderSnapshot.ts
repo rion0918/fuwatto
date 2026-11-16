@@ -35,12 +35,10 @@ type ReminderRow = {
 
 type SettingsRow = {
   theme: string;
-  auto_delete_enabled: number;
 };
 
 type WidgetSettings = {
   theme: AppTheme;
-  autoDeleteEnabled: boolean;
 };
 
 let widgetDb: SQLite.SQLiteDatabase | null = null;
@@ -91,7 +89,7 @@ function getReminders(db: SQLite.SQLiteDatabase, now: Date): WidgetReminder[] {
 function getSettings(db: SQLite.SQLiteDatabase): WidgetSettings {
   try {
     const row = db.getFirstSync<SettingsRow>(
-      `SELECT theme, auto_delete_enabled
+      `SELECT theme
        FROM app_settings
        WHERE id = 'default'
        LIMIT 1`,
@@ -99,7 +97,6 @@ function getSettings(db: SQLite.SQLiteDatabase): WidgetSettings {
 
     return {
       theme: coerceAppTheme(row?.theme ?? 'lavender'),
-      autoDeleteEnabled: row?.auto_delete_enabled !== 0,
     };
   } catch (error) {
     console.warn('[Widget] Failed to fetch settings from SQLite', error);
@@ -115,13 +112,12 @@ export async function getWidgetSnapshot(now = new Date()): Promise<WidgetSnapsho
 
     return {
       reminders: getReminders(db, now),
-      pastReminderCount: settings.autoDeleteEnabled
-        ? 0
-        : (db.getFirstSync<{ count: number }>(
-            `SELECT COUNT(*) AS count FROM reminders
+      pastReminderCount:
+        db.getFirstSync<{ count: number }>(
+          `SELECT COUNT(*) AS count FROM reminders
          WHERE status = 'expired' OR (status = 'active' AND expires_at <= ?)`,
-            [now.toISOString()],
-          )?.count ?? 0),
+          [now.toISOString()],
+        )?.count ?? 0,
       theme: settings.theme,
     };
   } catch (error) {

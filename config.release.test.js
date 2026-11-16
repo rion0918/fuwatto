@@ -567,7 +567,7 @@ test('privacy policy documents the current release data handling', () => {
   const privacyPolicy = readFileSync(privacyPolicyPath, 'utf8');
 
   assert.match(privacyPolicy, /プライバシーポリシー/);
-  assert.match(privacyPolicy, /最終更新日: 2026年11月14日/);
+  assert.match(privacyPolicy, /最終更新日: 2026年11月17日/);
   assert.match(privacyPolicy, /「ふわっと。」は/);
   assert.match(privacyPolicy, /端末内に保存/);
   assert.match(privacyPolicy, /開発者によるリマインダーの外部サーバー同期はありません/);

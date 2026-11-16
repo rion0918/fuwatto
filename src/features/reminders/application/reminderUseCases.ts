@@ -78,10 +78,7 @@ export function createReminderUseCases(dependencies: ReminderApplicationDependen
   return {
     listActive: (now?: Date) => reminders.listActive(now),
 
-    async listVisible(now?: Date) {
-      const currentSettings = await settings.get();
-      return reminders.listVisible(!currentSettings.autoDeleteEnabled, now);
-    },
+    listVisible: (now?: Date) => reminders.listVisible(true, now),
 
     async create(
       input: CreateReminderInput,
@@ -798,28 +795,12 @@ export function createReminderUseCases(dependencies: ReminderApplicationDependen
     acknowledgeDepartureNotices: reminders.acknowledgeDepartureNotices,
 
     async cleanup(now = new Date()) {
-      const [currentSettings, expiredReminders] = await Promise.all([
-        settings.get(),
-        reminders.listExpired(now),
-      ]);
-      const retainedExpiredReminders = currentSettings.autoDeleteEnabled
-        ? await reminders.listRetainedExpired()
-        : [];
-      const remindersToRemove = [...expiredReminders, ...retainedExpiredReminders];
-      if (remindersToRemove.length === 0) return 0;
+      const expiredReminders = await reminders.listExpired(now);
+      if (expiredReminders.length === 0) return 0;
 
-      let cleanedCount = remindersToRemove.length;
-      if (currentSettings.autoDeleteEnabled) {
-        await Promise.all(remindersToRemove.map((reminder) => notifications.cancel(reminder)));
-        cleanedCount = await reminders.deleteExpiredWithNotice(
-          remindersToRemove.map((reminder) => reminder.id),
-          now,
-        );
-      } else {
-        await Promise.all(expiredReminders.map((reminder) => reminders.markExpired(reminder.id)));
-      }
+      await Promise.all(expiredReminders.map((reminder) => reminders.markExpired(reminder.id)));
       await widget.sync();
-      return cleanedCount;
+      return expiredReminders.length;
     },
   };
 }

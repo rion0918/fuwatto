@@ -47,27 +47,34 @@ export function ReminderReviewEntry({ kind, count, preview, disabled = false, on
         pressed.value = reduceMotion ? 0 : withSpring(0, REMINDER_BUBBLE_PRESS_SPRING);
       }}
       style={[
-        styles.entry,
-        departed ? styles.departed : styles.past,
+        departed ? [styles.entry, styles.departed] : styles.past,
         animatedStyle,
         disabled ? styles.disabled : null,
       ]}
     >
-      <View style={styles.symbol}>
-        <Ionicons
-          name={departed ? 'cloud-outline' : 'time-outline'}
-          size={22}
-          color={palette.inkSecondary}
-        />
-      </View>
-      <View style={styles.content}>
-        <Text style={styles.title}>{title}</Text>
-        <Text numberOfLines={departed ? 2 : 1} style={styles.description}>
-          {departed ? preview : '時刻を過ぎた泡を見返す'}
+      {departed ? (
+        <>
+          <View style={styles.symbol}>
+            <Ionicons name="cloud-outline" size={22} color={palette.inkSecondary} />
+          </View>
+          <View style={styles.content}>
+            <Text style={styles.title}>{title}</Text>
+            <Text numberOfLines={2} style={styles.description}>
+              {preview}
+            </Text>
+          </View>
+          <Text style={styles.count}>{count}件</Text>
+        </>
+      ) : (
+        <Text numberOfLines={1} style={styles.pastText}>
+          過ぎた予定 {count}件
         </Text>
-      </View>
-      <Text style={styles.count}>{count}件</Text>
-      <Ionicons name="chevron-forward" size={17} color={palette.inkSecondary} />
+      )}
+      <Ionicons
+        name="chevron-forward"
+        size={17}
+        color={departed ? palette.inkSecondary : palette.lavenderDeep}
+      />
     </AnimatedPressable>
   );
 }
@@ -85,7 +92,23 @@ const styles = StyleSheet.create({
     borderColor: palette.line,
   },
   departed: { backgroundColor: palette.white, marginTop: 14 },
-  past: { backgroundColor: 'rgba(255,255,255,0.72)', marginTop: 10, marginBottom: 4 },
+  past: {
+    alignSelf: 'flex-start',
+    flexShrink: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    minHeight: 44,
+    paddingVertical: 8,
+    marginTop: 4,
+  },
+  pastText: {
+    color: palette.lavenderDeep,
+    fontSize: 13,
+    lineHeight: 20,
+    fontWeight: '600',
+    fontVariant: ['tabular-nums'],
+  },
   symbol: {
     width: 38,
     height: 38,

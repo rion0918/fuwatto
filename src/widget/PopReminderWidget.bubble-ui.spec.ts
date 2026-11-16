@@ -157,14 +157,12 @@ test('android widget retains rounded native click feedback', () => {
   ]);
 });
 
-test('native periodic updates respect auto-delete while the app is closed', () => {
+test('native periodic updates expose retained past reminders while the app is closed', () => {
   assertSourceIncludes(appConfigSource, [
     /"name": "PopReminderWidget"[\s\S]*"updatePeriodMillis": 1800000/,
   ]);
   assertSourceIncludes(nativeWidgetConfigSource, [/android:updatePeriodMillis="1800000"/]);
   assertSourceIncludes(snapshotSource, [
-    /autoDeleteEnabled/,
-    /auto_delete_enabled/,
     /pastReminderCount/,
     /SELECT COUNT\(\*\) AS count/,
     /status = 'expired'/,
