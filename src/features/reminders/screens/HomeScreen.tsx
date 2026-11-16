@@ -226,9 +226,8 @@ export function HomeScreen() {
     };
   }, [reminders]);
   const activeReminderCount = upcomingReminders.length;
-  const [visibleReminderIds, setVisibleReminderIds] = useState<Set<string>>(
-    () =>
-      new Set(upcomingReminders.slice(0, MAX_VISIBLE_HOME_BUBBLES).map((reminder) => reminder.id)),
+  const visibleReminderIdsRef = useRef<Set<string>>(
+    new Set(upcomingReminders.slice(0, MAX_VISIBLE_HOME_BUBBLES).map((reminder) => reminder.id)),
   );
   const selectedCount = selectedReminderIds.size;
   const allRemindersSelected =
@@ -441,10 +440,7 @@ export function HomeScreen() {
   );
 
   const handleVisibleReminderIdsChange = useCallback((ids: string[]) => {
-    setVisibleReminderIds((current) => {
-      if (current.size === ids.length && ids.every((id) => current.has(id))) return current;
-      return new Set(ids);
-    });
+    visibleReminderIdsRef.current = new Set(ids);
   }, []);
 
   const toggleSelectAll = useCallback(() => {
@@ -734,7 +730,7 @@ export function HomeScreen() {
         analytics.captureReminderDeleted({ surface: 'home', count: deletedIds.length });
         const motions = makeBulkDeleteMotions(deletedIds);
         const visibleMotions = motions.filter((motion) =>
-          visibleReminderIds.has(motion.reminderId),
+          visibleReminderIdsRef.current.has(motion.reminderId),
         );
         const motionCompletion = Promise.all(
           visibleMotions.map((motion) => waitForDeleteMotion(motion.reminderId, motion.phase)),
@@ -762,15 +758,7 @@ export function HomeScreen() {
         }
       }
     },
-    [
-      analytics,
-      cancelSelection,
-      deleteReminders,
-      refresh,
-      removeReminders,
-      visibleReminderIds,
-      waitForDeleteMotion,
-    ],
+    [analytics, cancelSelection, deleteReminders, refresh, removeReminders, waitForDeleteMotion],
   );
 
   const handleBulkDeletePress = useCallback(() => {

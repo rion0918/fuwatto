@@ -783,6 +783,27 @@ test('rescheduling a retained expired reminder respects the free active limit', 
   assert.deepEqual(events, []);
 });
 
+test('rescheduling a time-expired active reminder respects the free active limit', async () => {
+  const events: string[] = [];
+  const dependencies = makeDependencies(events);
+  dependencies.reminders.getById = async () => ({
+    ...reminder,
+    status: 'active',
+    expiresAt: '2026-07-13T00:00:00.000Z',
+  });
+  dependencies.reminders.listActive = async () => makeActiveReminders(FREE_ACTIVE_REMINDER_LIMIT);
+
+  await assert.rejects(
+    createReminderUseCases(dependencies).updateSchedule(
+      reminder.id,
+      { targetDate: '2026-07-15', targetTime: '18:30' },
+      { now: new Date('2026-07-14T09:00:00') },
+    ),
+    ActiveReminderLimitReachedError,
+  );
+  assert.deepEqual(events, []);
+});
+
 test('schedule update keeps the new date when notification scheduling is blocked', async () => {
   const events: string[] = [];
   const dependencies = makeDependencies(events);

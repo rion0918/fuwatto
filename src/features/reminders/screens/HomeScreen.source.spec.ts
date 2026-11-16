@@ -352,7 +352,7 @@ test('home supports long-press multi-selection and sequential bulk deletion', ()
     /const allRemindersSelected =\s*upcomingReminders\.length > 0 && selectedCount === upcomingReminders\.length;/,
     /allSelected=\{allRemindersSelected\}/,
     /new Set\(upcomingReminders\.map\(\(reminder\) => reminder\.id\)\)/,
-    /const visibleMotions = motions\.filter\(\(motion\) =>[\s\S]*visibleReminderIds\.has\(motion\.reminderId\)/,
+    /const visibleMotions = motions\.filter\(\(motion\) =>[\s\S]*visibleReminderIdsRef\.current\.has\(motion\.reminderId\)/,
     /visibleMotions\.map\(\(motion\) => waitForDeleteMotion/,
   ]);
 });

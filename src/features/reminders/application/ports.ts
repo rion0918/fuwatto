@@ -83,7 +83,7 @@ export type ReminderRepository = {
     id: string,
     update: ReminderPreviousScheduleUpdate,
   ): Promise<Reminder | null>;
-  markExpired(id: string): Promise<void>;
+  markExpired(id: string, now: Date): Promise<void>;
   deleteExpiredWithNotice(ids: string[], now: Date): Promise<number>;
   listDepartureNotices(): Promise<ReminderDepartureNotice[]>;
   acknowledgeDepartureNotices(ids: string[]): Promise<void>;

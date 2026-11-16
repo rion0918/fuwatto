@@ -144,11 +144,17 @@ export const sqliteReminderRepository: ReminderRepository = {
     return getById(id);
   },
 
-  async markExpired(id) {
+  async markExpired(id, now) {
     await db
       .update(reminders)
       .set({ status: 'expired', updatedAt: new Date().toISOString() })
-      .where(eq(reminders.id, id));
+      .where(
+        and(
+          eq(reminders.id, id),
+          eq(reminders.status, 'active'),
+          lte(reminders.expiresAt, now.toISOString()),
+        ),
+      );
   },
 
   async deleteMany(ids) {

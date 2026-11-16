@@ -115,3 +115,13 @@ test('startup adds the notice table to an existing database without losing remin
   expect(await repository.getById('existing')).not.toBeNull();
   expect(await repository.listDepartureNotices()).toEqual([]);
 });
+
+test('expiration skips a reminder rescheduled after the expired scan', async () => {
+  insert('moved');
+  expect((await repository.listExpired(now)).map((item) => item.id)).toContain('moved');
+  mockDatabase
+    .prepare('UPDATE reminders SET expires_at = ? WHERE id = ?')
+    .run('2030-05-13T09:00:00.000Z', 'moved');
+  await repository.markExpired('moved', now);
+  expect((await repository.getById('moved'))?.status).toBe('active');
+});

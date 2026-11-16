@@ -1,5 +1,6 @@
 import {
   normalizeReminderTitle,
+  isReminderExpired,
   type CreateReminderInput,
   type Reminder,
 } from '../domain/reminder';
@@ -550,7 +551,7 @@ export function createReminderUseCases(dependencies: ReminderApplicationDependen
       if (!reminder) return null;
 
       const now = options?.now ?? new Date();
-      if (reminder.status === 'expired' && (await proAccess.getState()) === 'free') {
+      if (isReminderExpired(reminder, now) && (await proAccess.getState()) === 'free') {
         const activeReminders = await reminders.listActive(now);
         if (activeReminders.length >= FREE_ACTIVE_REMINDER_LIMIT) {
           throw new ActiveReminderLimitReachedError();
@@ -798,7 +799,9 @@ export function createReminderUseCases(dependencies: ReminderApplicationDependen
       const expiredReminders = await reminders.listExpired(now);
       if (expiredReminders.length === 0) return 0;
 
-      await Promise.all(expiredReminders.map((reminder) => reminders.markExpired(reminder.id)));
+      await Promise.all(
+        expiredReminders.map((reminder) => reminders.markExpired(reminder.id, now)),
+      );
       await widget.sync();
       return expiredReminders.length;
     },
