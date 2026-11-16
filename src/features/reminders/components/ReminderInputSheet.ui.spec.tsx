@@ -165,4 +165,23 @@ describe('ReminderInputSheet custom time selection', () => {
     expect(view.getAllByText('14:30').length).toBeGreaterThanOrEqual(1);
     expect(view.getByRole('button', { name: '追加' })).not.toBeDisabled();
   });
+
+  it('keeps automatically corrected times eligible for correction after time passes', async () => {
+    await act(async () => {
+      useReminderUiStore.getState().openQuickAdd('08:00');
+    });
+    const view = await render(<ReminderInputSheet defaultTargetTime="08:00" />);
+
+    await fireEvent.press(view.getByText('明日'));
+    await fireEvent.press(view.getByText('今日'));
+    expect(useReminderUiStore.getState().timeDigits).toBe('1800');
+
+    jest.setSystemTime(new Date(2030, 4, 12, 18, 1));
+    await fireEvent.press(view.getByText('明日'));
+    await fireEvent.press(view.getByText('今日'));
+
+    expect(useReminderUiStore.getState().timeDigits).toBe('2000');
+    expect(useReminderUiStore.getState().timeTouched).toBe(false);
+    expect(view.getByRole('button', { name: '追加' })).not.toBeDisabled();
+  });
 });

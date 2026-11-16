@@ -183,6 +183,7 @@ export function ReminderInputSheet({
   const setPresetTargetDate = useReminderUiStore((state) => state.setPresetTargetDate);
   const setCustomTargetDate = useReminderUiStore((state) => state.setCustomTargetDate);
   const setTargetTime = useReminderUiStore((state) => state.setTargetTime);
+  const setAutomaticTargetTime = useReminderUiStore((state) => state.setAutomaticTargetTime);
   const setAllDay = useReminderUiStore((state) => state.setAllDay);
   const resetInput = useReminderUiStore((state) => state.resetInput);
   isOpenRef.current = isOpen;
@@ -839,7 +840,7 @@ export function ReminderInputSheet({
       const nextTime = getNextAvailableTimeForToday(nextDate, presets);
 
       if (!timeTouched && nextTime && buildTargetDateTime(nextDate, time).getTime() <= Date.now()) {
-        setTargetTime(nextTime);
+        setAutomaticTargetTime(nextTime);
       }
 
       setCustomTargetDate(format(nextDate, 'yyyy-MM-dd'));
@@ -853,7 +854,7 @@ export function ReminderInputSheet({
       minCustomDate,
       presets,
       setCustomTargetDate,
-      setTargetTime,
+      setAutomaticTargetTime,
       time,
       timeTouched,
     ],
@@ -865,12 +866,12 @@ export function ReminderInputSheet({
       const nextTime = getNextAvailableTimeForToday(nextDate, presets);
 
       if (!timeTouched && nextTime && buildTargetDateTime(nextDate, time).getTime() <= Date.now()) {
-        setTargetTime(nextTime);
+        setAutomaticTargetTime(nextTime);
       }
 
       setDateOffset(nextDateOffset);
     },
-    [presets, setDateOffset, setTargetTime, time, timeTouched],
+    [presets, setDateOffset, setAutomaticTargetTime, time, timeTouched],
   );
 
   const handlePresetDateChange = useCallback(
@@ -879,12 +880,12 @@ export function ReminderInputSheet({
       const nextTime = getNextAvailableTimeForToday(nextDate, presets);
 
       if (!timeTouched && nextTime && buildTargetDateTime(nextDate, time).getTime() <= Date.now()) {
-        setTargetTime(nextTime);
+        setAutomaticTargetTime(nextTime);
       }
 
       setPresetTargetDate(nextPreset, nextDateText);
     },
-    [presets, setPresetTargetDate, setTargetTime, time, timeTouched],
+    [presets, setPresetTargetDate, setAutomaticTargetTime, time, timeTouched],
   );
 
   const handleTargetTimeChange = useCallback(
