@@ -387,3 +387,24 @@ test('custom date picker uses platform native display styles', () => {
     /display=\{datePickerDisplay\}/,
   ]);
 });
+
+test('quick add preserves explicitly chosen time instead of falling back to a default preset', () => {
+  const handleTargetTimeChangeStart = source.indexOf('const handleTargetTimeChange = useCallback');
+  const handleTargetTimeChangeBlock = source.slice(
+    handleTargetTimeChangeStart,
+    source.indexOf('return (', handleTargetTimeChangeStart),
+  );
+  const dateChangeHandlersBlock = source.slice(
+    source.indexOf('const handleDatePickerChange = useCallback'),
+    handleTargetTimeChangeStart,
+  );
+
+  assertSourceContract(handleTargetTimeChangeBlock, {
+    includes: [/setTargetTime\(nextTime\);/],
+    excludes: [/getNextAvailableTimeForToday/, /fallbackTime/],
+  });
+  assertSourceIncludes(source, [
+    /const timeTouched = useReminderUiStore\(\(state\) => state\.timeTouched\);/,
+  ]);
+  assertSourceIncludes(dateChangeHandlersBlock, [/!timeTouched &&/]);
+});

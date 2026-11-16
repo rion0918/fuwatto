@@ -37,6 +37,7 @@ type ReminderUiState = {
   setPresetTargetDate: (datePreset: 'weekend' | 'nextWeek', date: string) => void;
   setCustomTargetDate: (date: string | null) => void;
   setTargetTime: (time: string) => void;
+  setAutomaticTargetTime: (time: string) => void;
   setAllDay: (allDay: boolean) => void;
   resetInput: (defaultTime?: string) => void;
 };
@@ -111,6 +112,7 @@ export const useReminderUiStore = create<ReminderUiState>((set) => ({
   setCustomTargetDate: (customTargetDate) =>
     set({ customTargetDate, datePreset: customTargetDate ? 'custom' : 'tomorrow' }),
   setTargetTime: (time) => set({ timeDigits: timeToDigits(time), timeTouched: true }),
+  setAutomaticTargetTime: (time) => set({ timeDigits: timeToDigits(time) }),
   setAllDay: (allDay) => set({ allDay }),
   resetInput: (defaultTime = '08:00') =>
     set({

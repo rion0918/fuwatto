@@ -1,3 +1,4 @@
+import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import { assertSourceIncludes, readSource } from '../../test-utils/sourceAssertions';
@@ -22,4 +23,14 @@ test('time picker commits once from its local draft', () => {
     /onConfirm\(draftTime\);/,
     /label="この時刻にする"/,
   ]);
+});
+
+test('time picker anchors pickerValue to value and visible so native wheel scrolling is not overwritten', () => {
+  const pickerValueBlock = source.slice(
+    source.indexOf('const pickerValue = useMemo'),
+    source.indexOf('const handleChange = useCallback'),
+  );
+
+  assertSourceIncludes(pickerValueBlock, [/\[value, visible\]/]);
+  assert.equal(pickerValueBlock.includes('draftTime'), false);
 });

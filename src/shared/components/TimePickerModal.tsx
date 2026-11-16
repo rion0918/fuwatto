@@ -44,12 +44,16 @@ export function TimePickerModal({
   }, [value, visible]);
 
   const pickerValue = useMemo(() => {
-    const [hoursText, minutesText] = draftTime.split(':');
+    if (!visible) {
+      return new Date();
+    }
+
+    const [hoursText, minutesText] = value.split(':');
     const date = new Date();
 
     date.setHours(Number(hoursText), Number(minutesText), 0, 0);
     return date;
-  }, [draftTime]);
+  }, [value, visible]);
 
   const handleChange = useCallback(
     (event: DateTimePickerEvent, selectedTime?: Date) => {

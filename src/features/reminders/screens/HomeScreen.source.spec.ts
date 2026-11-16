@@ -150,6 +150,7 @@ test('home presents the next reminder as a compact bubble card that opens its de
   );
 
   assertSourceIncludes(source, [
+    /const reminderDetailBubbles = require\(['"]\.\.\/\.\.\/\.\.\/\.\.\/assets\/reminder-detail-bubbles\.png['"]\);/,
     /const nextReminder = reminders\.find\(\(reminder\) => !reminder\.allDay\) \?\? null;/,
     /const nextReminderLabel = nextReminder[\s\S]*formatReminderBubbleDateTime\(nextReminder\.targetAt,/,
     /const nextReminderAccessibilityLabel = nextReminder[\s\S]*formatReminderDetailAccessibilityDateTime\(nextReminder\.targetAt,/,
@@ -163,16 +164,20 @@ test('home presents the next reminder as a compact bubble card that opens its de
       /onPress=\{\(\) => setSelectedReminderId\(nextReminder\.id\)\}/,
       /styles\.nextReminderCard/,
       /styles\.nextReminderCardPressed/,
-      /styles\.nextReminderBody/,
+      /<ImageBackground/,
+      /source=\{reminderDetailBubbles\}/,
+      /resizeMode="cover"/,
+      /styles\.nextReminderBackground/,
       /name="notifications-outline"/,
       /nextReminderIsExpired \? '期限済み' : '次のリマインド'/,
       /numberOfLines=\{1\}[\s\S]*ellipsizeMode="tail"[\s\S]*\{nextReminder\.title\}/,
       /numberOfLines=\{1\}[\s\S]*\{nextReminderLabel\}/,
     ],
-    excludes: [/完璧！/, /忘れたくないことはありません/, /name="time-outline"/, /<ImageBackground/],
+    excludes: [/完璧！/, /忘れたくないことはありません/, /name="time-outline"/],
   });
   assertSourceIncludes(nextReminderStyles, [
-    /nextReminderCard: \{[\s\S]*minHeight: 68,[\s\S]*borderRadius: 24,[\s\S]*borderWidth: 1,[\s\S]*borderColor: palette\.line,[\s\S]*backgroundColor: palette\.white/,
+    /nextReminderCard: \{[\s\S]*minHeight: 68,[\s\S]*borderRadius: 24,[\s\S]*borderWidth: 1,[\s\S]*backgroundColor: palette\.lavender/,
+    /nextReminderBackground: \{[\s\S]*minHeight: 68,/,
     /nextReminderIcon: \{[\s\S]*width: 40,[\s\S]*height: 40,[\s\S]*borderRadius: 20/,
     /nextReminderContent: \{[\s\S]*minWidth: 0,[\s\S]*flex: 1/,
     /nextReminderKicker: \{[\s\S]*fontSize: 13/,
