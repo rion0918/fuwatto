@@ -8,6 +8,7 @@ import {
   AppState,
   BackHandler,
   Image,
+  ImageBackground,
   Linking,
   Platform,
   Pressable,
@@ -56,6 +57,7 @@ import {
 } from '../hooks/useRaiseToSpeakGesture';
 
 const appIcon = require('../../../../assets/app-icon.png');
+const reminderDetailBubbles = require('../../../../assets/reminder-detail-bubbles.png');
 const HOME_ADD_BUTTON_SIZE = 64;
 const HOME_BOTTOM_CONTROLS_OFFSET = 28;
 const HOME_BUBBLE_CONTROLS_GAP = 12;
@@ -1174,7 +1176,12 @@ export function HomeScreen() {
               pressed ? styles.nextReminderCardPressed : null,
             ]}
           >
-            <View style={styles.nextReminderBody}>
+            <ImageBackground
+              source={reminderDetailBubbles}
+              resizeMode="cover"
+              style={styles.nextReminderBackground}
+              imageStyle={styles.nextReminderBackgroundImage}
+            >
               <View style={styles.nextReminderIcon}>
                 <Ionicons name="notifications-outline" size={19} color={palette.lavenderDeep} />
               </View>
@@ -1189,7 +1196,7 @@ export function HomeScreen() {
               <Text numberOfLines={1} style={styles.nextReminderDateTime}>
                 {nextReminderLabel}
               </Text>
-            </View>
+            </ImageBackground>
           </Pressable>
         </View>
       ) : null}
@@ -1374,8 +1381,8 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: palette.line,
-    backgroundColor: palette.white,
+    borderColor: 'rgba(211,213,251,0.72)',
+    backgroundColor: palette.lavender,
     shadowColor: palette.ink,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.06,
@@ -1389,12 +1396,15 @@ const styles = StyleSheet.create({
   nextReminderCardInactive: {
     opacity: 0.62,
   },
-  nextReminderBody: {
+  nextReminderBackground: {
     minHeight: 68,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 14,
     paddingVertical: 10,
+  },
+  nextReminderBackgroundImage: {
+    borderRadius: 23,
   },
   nextReminderIcon: {
     width: 40,
@@ -1404,8 +1414,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: palette.line,
-    backgroundColor: '#F3EEFF',
+    borderColor: 'rgba(255,255,255,0.84)',
+    backgroundColor: 'rgba(255,255,255,0.68)',
   },
   nextReminderContent: {
     minWidth: 0,

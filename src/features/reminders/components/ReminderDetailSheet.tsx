@@ -1,6 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ComponentProps } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import {
+  Alert,
+  ImageBackground,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { BottomSheetBackdrop, BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -39,6 +47,7 @@ type ReminderDetailSheetProps = {
 const DETAIL_SHEET_BOTTOM_CLEARANCE = 24;
 const DETAIL_SHEET_MIN_DYNAMIC_CONTENT_SIZE = 320;
 const DETAIL_SHEET_BASE_BOTTOM_PADDING = 28;
+const reminderDetailBubbles = require('../../../../assets/reminder-detail-bubbles.png');
 
 type NotificationTimelineProps = {
   reminder: Reminder;
@@ -78,7 +87,12 @@ function NotificationTimeline({
           isScheduleEditingDisabled ? styles.targetScheduleCardDisabled : null,
         ]}
       >
-        <View style={styles.targetScheduleBody}>
+        <ImageBackground
+          source={reminderDetailBubbles}
+          resizeMode="cover"
+          style={styles.targetScheduleBackground}
+          imageStyle={styles.targetScheduleBackgroundImage}
+        >
           <View style={styles.targetScheduleHeader}>
             <View style={styles.targetScheduleIcon}>
               <Ionicons name="notifications-outline" size={24} color={palette.lavenderDeep} />
@@ -94,7 +108,7 @@ function NotificationTimeline({
           <View style={styles.targetTimeHint}>
             <Text style={styles.targetTimeHintText}>タップして日時を変更</Text>
           </View>
-        </View>
+        </ImageBackground>
       </Pressable>
 
       {shouldDisplayPreviousNotification ? (
@@ -610,8 +624,8 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: palette.line,
-    backgroundColor: palette.cloud,
+    borderColor: 'rgba(211,213,251,0.72)',
+    backgroundColor: palette.lavender,
   },
   targetScheduleCardPressed: {
     opacity: 0.88,
@@ -620,10 +634,14 @@ const styles = StyleSheet.create({
   targetScheduleCardDisabled: {
     opacity: 0.5,
   },
-  targetScheduleBody: {
+  targetScheduleBackground: {
     minHeight: 180,
     paddingHorizontal: 18,
     paddingVertical: 18,
+  },
+  targetScheduleBackgroundImage: {
+    borderRadius: 23,
+    opacity: 0.64,
   },
   targetScheduleHeader: {
     flexDirection: 'row',
@@ -637,8 +655,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: palette.line,
-    backgroundColor: '#F3EEFF',
+    borderColor: 'rgba(255,255,255,0.84)',
+    backgroundColor: 'rgba(255,255,255,0.68)',
   },
   targetScheduleLabel: {
     minWidth: 0,

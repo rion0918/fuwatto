@@ -172,6 +172,7 @@ export function ReminderInputSheet({
   const customTargetDate = useReminderUiStore((state) => state.customTargetDate);
   const allDay = useReminderUiStore((state) => state.allDay);
   const time = useReminderUiStore(selectFormattedTime);
+  const timeTouched = useReminderUiStore((state) => state.timeTouched);
   const isTimeValid = useReminderUiStore(selectIsTimeValid);
   const closeQuickAdd = useReminderUiStore((state) => state.closeQuickAdd);
   const completeVoiceInput = useReminderUiStore((state) => state.completeVoiceInput);
@@ -837,7 +838,7 @@ export function ReminderInputSheet({
       const nextDate = selectedDate < minCustomDate ? minCustomDate : selectedDate;
       const nextTime = getNextAvailableTimeForToday(nextDate, presets);
 
-      if (nextTime && buildTargetDateTime(nextDate, time).getTime() <= Date.now()) {
+      if (!timeTouched && nextTime && buildTargetDateTime(nextDate, time).getTime() <= Date.now()) {
         setTargetTime(nextTime);
       }
 
@@ -847,7 +848,15 @@ export function ReminderInputSheet({
         closeDatePicker();
       }
     },
-    [closeDatePicker, minCustomDate, presets, setCustomTargetDate, setTargetTime, time],
+    [
+      closeDatePicker,
+      minCustomDate,
+      presets,
+      setCustomTargetDate,
+      setTargetTime,
+      time,
+      timeTouched,
+    ],
   );
 
   const handleDateOffsetChange = useCallback(
@@ -855,13 +864,13 @@ export function ReminderInputSheet({
       const nextDate = addDays(new Date(), nextDateOffset);
       const nextTime = getNextAvailableTimeForToday(nextDate, presets);
 
-      if (nextTime && buildTargetDateTime(nextDate, time).getTime() <= Date.now()) {
+      if (!timeTouched && nextTime && buildTargetDateTime(nextDate, time).getTime() <= Date.now()) {
         setTargetTime(nextTime);
       }
 
       setDateOffset(nextDateOffset);
     },
-    [presets, setDateOffset, setTargetTime, time],
+    [presets, setDateOffset, setTargetTime, time, timeTouched],
   );
 
   const handlePresetDateChange = useCallback(
@@ -869,29 +878,20 @@ export function ReminderInputSheet({
       const nextDate = new Date(`${nextDateText}T00:00:00`);
       const nextTime = getNextAvailableTimeForToday(nextDate, presets);
 
-      if (nextTime && buildTargetDateTime(nextDate, time).getTime() <= Date.now()) {
+      if (!timeTouched && nextTime && buildTargetDateTime(nextDate, time).getTime() <= Date.now()) {
         setTargetTime(nextTime);
       }
 
       setPresetTargetDate(nextPreset, nextDateText);
     },
-    [presets, setPresetTargetDate, setTargetTime, time],
+    [presets, setPresetTargetDate, setTargetTime, time, timeTouched],
   );
 
   const handleTargetTimeChange = useCallback(
     (nextTime: string) => {
-      const targetDateTime = buildTargetDateTime(selectedTargetDate, nextTime);
-
-      if (targetDateTime.getTime() <= Date.now()) {
-        const fallbackTime = getNextAvailableTimeForToday(selectedTargetDate, presets);
-
-        setTargetTime(fallbackTime ?? nextTime);
-        return;
-      }
-
       setTargetTime(nextTime);
     },
-    [presets, selectedTargetDate, setTargetTime],
+    [setTargetTime],
   );
 
   return (
