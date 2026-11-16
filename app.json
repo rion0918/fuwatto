@@ -3,7 +3,7 @@
     "name": "ふわっと。",
     "slug": "pop-reminder",
     "scheme": "popreminder",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "description": "忘れる前に、数秒だけ。ふわっと残せるシンプルなリマインダーアプリです。",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
