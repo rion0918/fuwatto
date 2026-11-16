@@ -11,12 +11,14 @@ const themeLabels: Record<AppTheme, string> = {
   mint: 'ブリーズ',
 };
 
-export function SettingsSection({ title, children }: PropsWithChildren<{ title: string }>) {
+export function SettingsSection({ title, children }: PropsWithChildren<{ title?: string }>) {
   return (
     <View style={styles.section}>
-      <Text accessibilityRole="header" style={styles.heading}>
-        {title}
-      </Text>
+      {title ? (
+        <Text accessibilityRole="header" style={styles.heading}>
+          {title}
+        </Text>
+      ) : null}
       {children}
     </View>
   );
@@ -174,38 +176,7 @@ export function SettingsNotificationTimeline({
   );
 }
 
-export function SettingsAutoDeletePreview({ enabled }: { enabled: boolean }) {
-  return (
-    <View>
-      <View
-        style={styles.illustration}
-        accessibilityLabel={enabled ? '予定日を過ぎると泡を削除' : '予定日を過ぎても泡を保持'}
-      >
-        <View style={styles.step}>
-          <PreviewBubble color={appThemes.lavender.accentSoft} size={34} />
-          <Text style={styles.hint}>予定日</Text>
-        </View>
-        <View style={styles.step}>
-          <Ionicons name="arrow-forward" size={18} color={palette.inkSecondary} />
-          <Text style={styles.hint}>日付が変わる</Text>
-        </View>
-        <View style={styles.step}>
-          {enabled ? (
-            <View style={styles.emptyBubble}>
-              <Ionicons name="sparkles-outline" size={18} color={palette.inkSecondary} />
-            </View>
-          ) : (
-            <PreviewBubble color={appThemes.lavender.accentSoft} size={34} />
-          )}
-          <Text style={styles.hint}>{enabled ? '泡が消える' : '泡を残す'}</Text>
-        </View>
-      </View>
-      <Text style={styles.caption}>予定日を過ぎた泡を、アプリ起動時などに削除</Text>
-    </View>
-  );
-}
-
-export function SettingsVoicePreview({ enabled }: { enabled: boolean }) {
+export function SettingsVoicePreview() {
   return (
     <View style={styles.voicePreview}>
       <View
@@ -220,14 +191,6 @@ export function SettingsVoicePreview({ enabled }: { enabled: boolean }) {
         <View style={{ transform: [{ rotate: '20deg' }] }}>
           <Ionicons name="phone-portrait-outline" size={22} color={palette.lavenderDeep} />
         </View>
-      </View>
-      <View style={styles.voiceLabel}>
-        <Ionicons
-          name={enabled ? 'mic' : 'mic-outline'}
-          size={18}
-          color={enabled ? palette.mintDeep : palette.inkSecondary}
-        />
-        <Text style={styles.voiceText}>{enabled ? '傾けて話す' : '傾けて音声入力'}</Text>
       </View>
     </View>
   );
@@ -330,29 +293,6 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   currentDay: { flex: 1, alignItems: 'center', gap: 6 },
-  illustration: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 10,
-    borderRadius: 16,
-    backgroundColor: palette.cloud,
-    borderWidth: 1,
-    borderColor: palette.line,
-    gap: 6,
-  },
-  step: { flex: 1, alignItems: 'center', gap: 8 },
-  emptyBubble: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: palette.controlLine,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   caption: {
     color: palette.inkSecondary,
     fontSize: 13,
@@ -370,10 +310,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 14,
     marginTop: 6,
   },
   phones: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  voiceLabel: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  voiceText: { fontSize: 13, fontWeight: '600', color: palette.inkSecondary },
 });

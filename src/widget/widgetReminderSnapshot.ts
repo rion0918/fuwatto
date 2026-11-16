@@ -19,6 +19,7 @@ export type WidgetReminder = {
 
 export type WidgetSnapshot = {
   reminders: WidgetReminder[];
+  pastReminderCount: number;
   theme: AppTheme;
 };
 
@@ -34,12 +35,10 @@ type ReminderRow = {
 
 type SettingsRow = {
   theme: string;
-  auto_delete_enabled: number;
 };
 
 type WidgetSettings = {
   theme: AppTheme;
-  autoDeleteEnabled: boolean;
 };
 
 let widgetDb: SQLite.SQLiteDatabase | null = null;
@@ -55,11 +54,7 @@ function getWidgetDb(): SQLite.SQLiteDatabase {
   return widgetDb;
 }
 
-function getReminders(
-  db: SQLite.SQLiteDatabase,
-  now: Date,
-  includeExpired: boolean,
-): WidgetReminder[] {
+function getReminders(db: SQLite.SQLiteDatabase, now: Date): WidgetReminder[] {
   const nowIso = now.toISOString();
   const todayStart = startOfLocalDay(now);
   const todayStartIso = todayStart.toISOString();
@@ -72,31 +67,15 @@ function getReminders(
      ORDER BY target_at ASC`,
     [nowIso, todayStartIso, tomorrowStartIso],
   );
-  const rows = includeExpired
-    ? db.getAllSync<ReminderRow>(
-        `SELECT id, title, all_day, target_at, target_notify_at, expires_at, status
-         FROM reminders
-         WHERE ((status = 'active' AND expires_at > ?)
-            OR status = 'expired'
-            OR (status = 'active' AND expires_at <= ?))
-           AND NOT (status = 'active' AND expires_at > ? AND all_day <> 0
-             AND target_at >= ? AND target_at < ?)
-         ORDER BY
-           CASE WHEN status = 'active' AND expires_at > ? THEN 0 ELSE 1 END ASC,
-           CASE WHEN status = 'active' AND expires_at > ? THEN target_at END ASC,
-           CASE WHEN status = 'expired' OR expires_at <= ? THEN target_at END DESC
-         LIMIT 20`,
-        [nowIso, nowIso, nowIso, todayStartIso, tomorrowStartIso, nowIso, nowIso, nowIso],
-      )
-    : db.getAllSync<ReminderRow>(
-        `SELECT id, title, all_day, target_at, target_notify_at, expires_at, status
+  const rows = db.getAllSync<ReminderRow>(
+    `SELECT id, title, all_day, target_at, target_notify_at, expires_at, status
          FROM reminders
          WHERE status = 'active' AND expires_at > ?
            AND NOT (all_day <> 0 AND target_at >= ? AND target_at < ?)
          ORDER BY target_at ASC
          LIMIT 20`,
-        [nowIso, todayStartIso, tomorrowStartIso],
-      );
+    [nowIso, todayStartIso, tomorrowStartIso],
+  );
 
   return [...todayAllDayRows, ...rows].map((row) => ({
     id: row.id,
@@ -110,7 +89,7 @@ function getReminders(
 function getSettings(db: SQLite.SQLiteDatabase): WidgetSettings {
   try {
     const row = db.getFirstSync<SettingsRow>(
-      `SELECT theme, auto_delete_enabled
+      `SELECT theme
        FROM app_settings
        WHERE id = 'default'
        LIMIT 1`,
@@ -118,7 +97,6 @@ function getSettings(db: SQLite.SQLiteDatabase): WidgetSettings {
 
     return {
       theme: coerceAppTheme(row?.theme ?? 'lavender'),
-      autoDeleteEnabled: row?.auto_delete_enabled !== 0,
     };
   } catch (error) {
     console.warn('[Widget] Failed to fetch settings from SQLite', error);
@@ -133,7 +111,13 @@ export async function getWidgetSnapshot(now = new Date()): Promise<WidgetSnapsho
     const settings = getSettings(db);
 
     return {
-      reminders: getReminders(db, now, !settings.autoDeleteEnabled),
+      reminders: getReminders(db, now),
+      pastReminderCount:
+        db.getFirstSync<{ count: number }>(
+          `SELECT COUNT(*) AS count FROM reminders
+         WHERE status = 'expired' OR (status = 'active' AND expires_at <= ?)`,
+          [now.toISOString()],
+        )?.count ?? 0,
       theme: settings.theme,
     };
   } catch (error) {

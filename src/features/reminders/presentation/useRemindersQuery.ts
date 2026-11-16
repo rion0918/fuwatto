@@ -2,9 +2,10 @@ import { useCallback, useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useAppServices } from '../../../bootstrap/appServicesContext';
-import type { Reminder } from '../domain/reminder';
+import type { Reminder, ReminderDepartureNotice } from '../domain/reminder';
 import {
   activeRemindersQueryKey,
+  departureNoticesQueryKey,
   deleteRemindersAndSyncCache,
   removeRemindersFromQueryCache,
 } from './reminderQueryMutations';
@@ -41,6 +42,21 @@ export function useRemindersQuery() {
     retry: false,
   });
   const { data: reminders, error, isLoading, refetch } = query;
+  const departureQuery = useQuery({
+    queryKey: departureNoticesQueryKey,
+    queryFn: () => services.reminders.listDepartureNotices(),
+    retry: false,
+  });
+  const acknowledgeDepartures = useMutation({
+    mutationFn: (ids: string[]) => services.reminders.acknowledgeDepartureNotices(ids),
+    onSuccess: (_, ids) => {
+      queryClient.setQueryData<ReminderDepartureNotice[]>(
+        departureNoticesQueryKey,
+        (current = []) => current.filter((item) => !ids.includes(item.id)),
+      );
+      void queryClient.invalidateQueries({ queryKey: departureNoticesQueryKey });
+    },
+  });
 
   const reconcile = useCallback(
     () => queryClient.invalidateQueries({ queryKey: activeRemindersQueryKey }),
@@ -132,8 +148,11 @@ export function useRemindersQuery() {
 
   const reconcileExpiredReminders = useCallback(async () => {
     await services.reminders.cleanup();
-    await refetch();
-  }, [refetch, services.reminders]);
+    await Promise.all([
+      refetch(),
+      queryClient.invalidateQueries({ queryKey: departureNoticesQueryKey }),
+    ]);
+  }, [refetch, queryClient, services.reminders]);
 
   useEffect(() => {
     const nextTarget = (reminders ?? []).reduce<number | null>((next, reminder) => {
@@ -164,6 +183,13 @@ export function useRemindersQuery() {
   const refresh = useCallback((_options?: { silent?: boolean }) => refetch(), [refetch]);
 
   return {
+    departureNotices: departureQuery.data ?? [],
+    departureNoticeError: departureQuery.error
+      ? '空へかえった泡の案内を読み込めませんでした'
+      : null,
+    refreshDepartureNotices: departureQuery.refetch,
+    acknowledgeDepartureNotices: acknowledgeDepartures.mutateAsync,
+    isAcknowledgingDepartures: acknowledgeDepartures.isPending,
     reminders: reminders ?? [],
     loading: isLoading,
     error: error ? 'リマインダーを読み込めませんでした' : null,

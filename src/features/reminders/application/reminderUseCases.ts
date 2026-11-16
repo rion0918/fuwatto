@@ -1,5 +1,6 @@
 import {
   normalizeReminderTitle,
+  isReminderExpired,
   type CreateReminderInput,
   type Reminder,
 } from '../domain/reminder';
@@ -78,10 +79,7 @@ export function createReminderUseCases(dependencies: ReminderApplicationDependen
   return {
     listActive: (now?: Date) => reminders.listActive(now),
 
-    async listVisible(now?: Date) {
-      const currentSettings = await settings.get();
-      return reminders.listVisible(!currentSettings.autoDeleteEnabled, now);
-    },
+    listVisible: (now?: Date) => reminders.listVisible(true, now),
 
     async create(
       input: CreateReminderInput,
@@ -553,7 +551,7 @@ export function createReminderUseCases(dependencies: ReminderApplicationDependen
       if (!reminder) return null;
 
       const now = options?.now ?? new Date();
-      if (reminder.status === 'expired' && (await proAccess.getState()) === 'free') {
+      if (isReminderExpired(reminder, now) && (await proAccess.getState()) === 'free') {
         const activeReminders = await reminders.listActive(now);
         if (activeReminders.length >= FREE_ACTIVE_REMINDER_LIMIT) {
           throw new ActiveReminderLimitReachedError();
@@ -793,25 +791,19 @@ export function createReminderUseCases(dependencies: ReminderApplicationDependen
       };
     },
 
-    async cleanup(now = new Date()) {
-      const [currentSettings, expiredReminders] = await Promise.all([
-        settings.get(),
-        reminders.listExpired(now),
-      ]);
-      const retainedExpiredReminders = currentSettings.autoDeleteEnabled
-        ? await reminders.listRetainedExpired()
-        : [];
-      const remindersToRemove = [...expiredReminders, ...retainedExpiredReminders];
-      if (remindersToRemove.length === 0) return 0;
+    listDepartureNotices: reminders.listDepartureNotices,
 
-      if (currentSettings.autoDeleteEnabled) {
-        await Promise.all(remindersToRemove.map((reminder) => notifications.cancel(reminder)));
-        await reminders.deleteMany(remindersToRemove.map((reminder) => reminder.id));
-      } else {
-        await Promise.all(expiredReminders.map((reminder) => reminders.markExpired(reminder.id)));
-      }
+    acknowledgeDepartureNotices: reminders.acknowledgeDepartureNotices,
+
+    async cleanup(now = new Date()) {
+      const expiredReminders = await reminders.listExpired(now);
+      if (expiredReminders.length === 0) return 0;
+
+      await Promise.all(
+        expiredReminders.map((reminder) => reminders.markExpired(reminder.id, now)),
+      );
       await widget.sync();
-      return remindersToRemove.length;
+      return expiredReminders.length;
     },
   };
 }

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import {
@@ -20,7 +20,7 @@ import { useAppSettingsQuery as useAppSettings } from '../../settings/presentati
 import { ReminderDetailSheet } from '../components/ReminderDetailSheet';
 import { ReminderSelectionBar } from '../components/ReminderSelectionBar';
 import { useRemindersQuery as useReminders } from '../presentation/useRemindersQuery';
-import type { Reminder } from '../domain/reminder';
+import { isReminderExpired, type Reminder } from '../domain/reminder';
 import { filterReminders, type SearchFilter } from '../domain/reminderFilter';
 import { formatReminderDateTime } from '../utils/reminderDateFormat';
 import { getMsUntilNextDay, getReminderDueColor } from '../utils/reminderDueColor';
@@ -66,7 +66,10 @@ export function ReminderListScreen() {
   const selectedReminder = reminders.find((reminder) => reminder.id === selectedReminderId) ?? null;
   const listQuery = typeof params.query === 'string' ? params.query : '';
   const listFilter: SearchFilter =
-    params.filter === 'today' || params.filter === 'tomorrow' || params.filter === 'week'
+    params.filter === 'today' ||
+    params.filter === 'tomorrow' ||
+    params.filter === 'week' ||
+    params.filter === 'past'
       ? params.filter
       : 'all';
   const displayedReminders = useMemo(
@@ -74,6 +77,8 @@ export function ReminderListScreen() {
     [listFilter, listQuery, reminders],
   );
   const selectedCount = selectedReminderIds.size;
+  const isPastView = listFilter === 'past';
+  const hasPastReminders = displayedReminders.some((reminder) => isReminderExpired(reminder));
   const allRemindersSelected =
     displayedReminders.length > 0 && selectedCount === displayedReminders.length;
 
@@ -281,7 +286,7 @@ export function ReminderListScreen() {
           />
         </Pressable>
         <Text className="text-[18px] font-bold leading-[26px] text-app-ink">
-          {isSelectionMode ? `${selectedCount}件選択中` : 'すべての泡'}
+          {isSelectionMode ? `${selectedCount}件選択中` : isPastView ? '過ぎた予定' : 'すべての泡'}
         </Text>
         <View className="w-[48px]" />
       </View>
@@ -292,13 +297,17 @@ export function ReminderListScreen() {
       >
         <View className="min-w-0 flex-1">
           <Text numberOfLines={1} className="text-[13px] font-semibold text-app-ink-secondary">
-            {listQuery || listFilter !== 'all' ? '検索条件に一致する泡' : '表示中の泡'}
+            {isPastView
+              ? '時刻を過ぎた予定'
+              : listQuery || listFilter !== 'all'
+                ? '検索条件に一致する泡'
+                : '表示中の泡'}
           </Text>
           <Text
             className="mt-[4px] text-[22px] font-bold leading-[29px] text-app-ink"
             numberOfLines={2}
           >
-            リマインドを一覧で見る
+            {isPastView ? '残してある泡' : 'リマインドを一覧で見る'}
           </Text>
         </View>
         <View className="min-h-[42px] min-w-[58px] max-w-[34%] shrink-0 items-center justify-center rounded-[16px] border border-app-line bg-app-lavender px-[12px]">
@@ -336,103 +345,122 @@ export function ReminderListScreen() {
             <Ionicons name="ellipse-outline" size={30} color={palette.lavenderDeep} />
           </View>
           <Text className="text-center text-[18px] font-bold leading-[26px] text-app-ink">
-            浮いている泡はありません
+            {isPastView ? '過ぎた予定はありません' : '浮いている泡はありません'}
           </Text>
           <Text className="mt-[8px] text-center text-[15px] font-medium leading-[23px] text-app-ink-secondary">
-            ホームからふわっと追加しましょう
+            {isPastView
+              ? 'これからの予定はホームで確認できます'
+              : 'ホームからふわっと追加しましょう'}
           </Text>
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.listContent} showsVerticalScrollIndicator={false}>
-          {displayedReminders.map((reminder) => {
+          {displayedReminders.map((reminder, index) => {
             const dueColor = getReminderDueColor(reminder.targetAt, colorReferenceDate);
             const isSelected = selectedReminderIds.has(reminder.id);
+            const isPast = isReminderExpired(reminder);
+            const showSectionHeading =
+              !isPastView &&
+              hasPastReminders &&
+              (index === 0 || isPast !== isReminderExpired(displayedReminders[index - 1]));
 
             return (
-              <Pressable
-                key={reminder.id}
-                accessibilityRole={isSelectionMode ? 'checkbox' : 'button'}
-                accessibilityLabel={
-                  isSelectionMode
-                    ? `${reminder.title}を${isSelected ? '選択解除' : '選択'}`
-                    : `${reminder.title}の詳細を開く`
-                }
-                accessibilityHint={
-                  isSelectionMode ? 'タップして選択状態を切り替えます' : '長押しで複数選択できます'
-                }
-                accessibilityState={
-                  isSelectionMode
-                    ? { checked: isSelected, disabled: isDeletingReminders }
-                    : { disabled: isDeletingReminders }
-                }
-                onLongPress={() => {
-                  if (!isDeletingReminders && !isSelectionMode) {
-                    longPressTriggeredIdRef.current = reminder.id;
-                    enterSelectionMode(reminder.id);
+              <Fragment key={reminder.id}>
+                {showSectionHeading ? (
+                  <Text accessibilityRole="header" style={styles.sectionHeading}>
+                    {isPast ? '過ぎた予定' : 'これからの予定'}
+                  </Text>
+                ) : null}
+                <Pressable
+                  accessibilityRole={isSelectionMode ? 'checkbox' : 'button'}
+                  accessibilityLabel={
+                    isSelectionMode
+                      ? `${reminder.title}を${isSelected ? '選択解除' : '選択'}`
+                      : `${isPast ? '過ぎた予定、' : ''}${reminder.title}の詳細を開く`
                   }
-                }}
-                onPress={() => {
-                  if (isDeletingReminders) return;
-                  if (longPressTriggeredIdRef.current === reminder.id) {
-                    longPressTriggeredIdRef.current = null;
-                    return;
+                  accessibilityHint={
+                    isSelectionMode
+                      ? 'タップして選択状態を切り替えます'
+                      : '長押しで複数選択できます'
                   }
-                  if (isSelectionMode) {
-                    toggleReminderSelection(reminder.id);
-                  } else {
-                    setSelectedReminderId(reminder.id);
+                  accessibilityState={
+                    isSelectionMode
+                      ? { checked: isSelected, disabled: isDeletingReminders }
+                      : { disabled: isDeletingReminders }
                   }
-                }}
-                disabled={isDeletingReminders}
-                className="mb-[10px] min-h-[72px] flex-row items-center gap-[12px] rounded-[20px] border border-app-line bg-app-white px-[14px] py-[10px]"
-                style={({ pressed }) => [
-                  isSelected ? styles.listItemSelected : null,
-                  pressed ? styles.listItemPressed : null,
-                ]}
-              >
-                <View
-                  className="h-[44px] w-[44px] items-center justify-center overflow-hidden rounded-[22px] border"
-                  style={[
-                    styles.indexBubbleFallback,
-                    {
-                      backgroundColor: dueColor.background,
-                      borderColor: dueColor.border,
-                    },
+                  onLongPress={() => {
+                    if (!isDeletingReminders && !isSelectionMode) {
+                      longPressTriggeredIdRef.current = reminder.id;
+                      enterSelectionMode(reminder.id);
+                    }
+                  }}
+                  onPress={() => {
+                    if (isDeletingReminders) return;
+                    if (longPressTriggeredIdRef.current === reminder.id) {
+                      longPressTriggeredIdRef.current = null;
+                      return;
+                    }
+                    if (isSelectionMode) {
+                      toggleReminderSelection(reminder.id);
+                    } else {
+                      setSelectedReminderId(reminder.id);
+                    }
+                  }}
+                  disabled={isDeletingReminders}
+                  className="mb-[10px] min-h-[72px] flex-row items-center gap-[12px] rounded-[20px] border border-app-line bg-app-white px-[14px] py-[10px]"
+                  style={({ pressed }) => [
+                    isSelected ? styles.listItemSelected : null,
+                    pressed ? styles.listItemPressed : null,
                   ]}
                 >
-                  <View className="absolute left-[10px] top-[8px] h-[8px] w-[14px] rotate-[-28deg] rounded-[7px] bg-[rgba(255,255,255,0.64)]" />
-                </View>
-                <View className="min-w-0 flex-1">
-                  <Text
-                    numberOfLines={1}
-                    className="text-[15px] font-bold leading-[22px] text-app-ink"
-                  >
-                    {reminder.title}
-                  </Text>
-                  <Text
-                    numberOfLines={1}
-                    className="mt-[3px] text-[13px] font-medium leading-[18px] text-app-ink-secondary"
-                    style={styles.tabularTime}
-                  >
-                    {formatReminderDateTime(reminder.targetAt, reminder.allDay)}
-                  </Text>
-                </View>
-                {isSelectionMode ? (
                   <View
-                    className="h-[28px] w-[28px] items-center justify-center rounded-[14px] border"
+                    className="h-[44px] w-[44px] items-center justify-center overflow-hidden rounded-[22px] border"
                     style={[
-                      styles.selectionIndicator,
-                      isSelected ? styles.selectionIndicatorSelected : null,
+                      styles.indexBubbleFallback,
+                      {
+                        backgroundColor: isPast ? palette.cloud : dueColor.background,
+                        borderColor: isPast ? palette.line : dueColor.border,
+                      },
                     ]}
                   >
-                    {isSelected ? (
-                      <Ionicons name="checkmark" size={18} color={palette.white} />
-                    ) : null}
+                    {isPast ? (
+                      <Ionicons name="time-outline" size={22} color={palette.inkSecondary} />
+                    ) : (
+                      <View className="absolute left-[10px] top-[8px] h-[8px] w-[14px] rotate-[-28deg] rounded-[7px] bg-[rgba(255,255,255,0.64)]" />
+                    )}
                   </View>
-                ) : (
-                  <Ionicons name="chevron-forward" size={18} color={palette.inkSecondary} />
-                )}
-              </Pressable>
+                  <View className="min-w-0 flex-1">
+                    <Text
+                      numberOfLines={isPast ? undefined : 1}
+                      className="text-[15px] font-bold leading-[22px] text-app-ink"
+                    >
+                      {reminder.title}
+                    </Text>
+                    <Text
+                      numberOfLines={isPast ? undefined : 1}
+                      className="mt-[3px] text-[13px] font-medium leading-[18px] text-app-ink-secondary"
+                      style={styles.tabularTime}
+                    >
+                      {formatReminderDateTime(reminder.targetAt, reminder.allDay)}
+                    </Text>
+                  </View>
+                  {isSelectionMode ? (
+                    <View
+                      className="h-[28px] w-[28px] items-center justify-center rounded-[14px] border"
+                      style={[
+                        styles.selectionIndicator,
+                        isSelected ? styles.selectionIndicatorSelected : null,
+                      ]}
+                    >
+                      {isSelected ? (
+                        <Ionicons name="checkmark" size={18} color={palette.white} />
+                      ) : null}
+                    </View>
+                  ) : (
+                    <Ionicons name="chevron-forward" size={18} color={palette.inkSecondary} />
+                  )}
+                </Pressable>
+              </Fragment>
             );
           })}
         </ScrollView>
@@ -464,6 +492,14 @@ export function ReminderListScreen() {
 }
 
 const styles = StyleSheet.create({
+  sectionHeading: {
+    marginTop: 14,
+    marginBottom: 10,
+    fontSize: 14,
+    lineHeight: 22,
+    fontWeight: '700',
+    color: palette.inkSecondary,
+  },
   ambientOne: {
     top: 96,
     right: -28,

@@ -1,9 +1,10 @@
 import { addLocalDays, isSameLocalDay, startOfLocalDay } from './localDate';
-import type { Reminder } from './reminder';
+import { isReminderExpired, type Reminder } from './reminder';
 
-export type SearchFilter = 'all' | 'today' | 'tomorrow' | 'week';
+export type SearchFilter = 'all' | 'today' | 'tomorrow' | 'week' | 'past';
 
 function matchesDateFilter(reminder: Reminder, filter: SearchFilter, now: Date) {
+  if (filter === 'past') return isReminderExpired(reminder, now);
   const target = new Date(reminder.targetAt);
   if (filter === 'today') return isSameLocalDay(target, now);
   if (filter === 'tomorrow') return isSameLocalDay(target, addLocalDays(now, 1));

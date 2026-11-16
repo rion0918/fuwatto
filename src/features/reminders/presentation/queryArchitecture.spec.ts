@@ -39,7 +39,7 @@ test('app focus and target time both trigger SQLite reconciliation', () => {
     /appServices\.reminders\.cleanup\(\)[\s\S]*focusManager\.setFocused\(true\)[\s\S]*invalidateQueries\(\{ queryKey: activeRemindersQueryKey \}\)/,
   ]);
   assertSourceIncludes(querySource, [
-    /const reconcileExpiredReminders = useCallback\(async \(\) => \{[\s\S]*await services\.reminders\.cleanup\(\);[\s\S]*await refetch\(\);/,
+    /const reconcileExpiredReminders = useCallback\(async \(\) => \{[\s\S]*await services\.reminders\.cleanup\(\);[\s\S]*await Promise\.all\(\[\s*refetch\(\),[\s\S]*departureNoticesQueryKey/,
     /const scheduleRefresh = \(\) => \{/,
     /Math\.max\(0, nextTarget - Date\.now\(\)\)/,
     /Math\.min\(remainingMs, MAX_REFRESH_TIMER_MS\)/,

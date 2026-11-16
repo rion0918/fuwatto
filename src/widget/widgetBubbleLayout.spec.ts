@@ -242,6 +242,48 @@ test('tomorrow all-day is the next reminder when today has no plans', () => {
   assert.equal(plan.allDaySummary, null);
 });
 
+test('past reminders never occupy the hero or queue and have a separate review entry', () => {
+  const past = { ...timedReminder, id: 'past', isExpired: true };
+  const plan = getWidgetLayoutPlan([past, tomorrowReminder], 250, 180, today);
+  assert.equal(plan.hero?.reminderId, 'tomorrow');
+  assert.deepEqual(plan.visibleReminderIds, ['tomorrow']);
+  assert.equal(plan.overflowCount, 0);
+  assert.equal(plan.pastSummary?.count, 1);
+  assert.ok(plan.pastSummary);
+  assert.ok(plan.pastSummary.right <= plan.addButton.left);
+  assert.ok(plan.hero.bottom < plan.pastSummary.top);
+});
+
+test('a widget with only past reminders has no next reminder and keeps an accessible review entry', () => {
+  for (const [width, height] of [
+    [250, 180],
+    [320, 250],
+    [360, 320],
+  ]) {
+    const plan = getWidgetLayoutPlan(
+      [{ ...timedReminder, isExpired: true }],
+      width,
+      height,
+      today,
+      37,
+    );
+    assert.equal(plan.hero, null);
+    assert.deepEqual(plan.visibleReminderIds, []);
+    assert.equal(plan.pastSummary?.count, 37);
+    assert.ok(plan.pastSummary);
+    assertInside(plan.pastSummary, {
+      left: 0,
+      top: 0,
+      right: width,
+      bottom: height,
+      width,
+      height,
+    });
+    assert.ok(plan.pastSummary.height >= 44);
+    assert.ok(plan.pastSummary.right <= plan.addButton.left);
+  }
+});
+
 test('all-day grouping follows local midnight rather than the UTC date', () => {
   const plan = getWidgetLayoutPlan(
     [

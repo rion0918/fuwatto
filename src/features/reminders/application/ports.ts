@@ -1,6 +1,6 @@
 import type { AppSettings } from '../../settings/domain/appSettings';
 import type { ProAccessState } from '../../purchases/application/purchaseService';
-import type { CreateReminderDraft, Reminder } from '../domain/reminder';
+import type { CreateReminderDraft, Reminder, ReminderDepartureNotice } from '../domain/reminder';
 
 export type ReminderNotificationIds = Pick<
   Reminder,
@@ -83,7 +83,10 @@ export type ReminderRepository = {
     id: string,
     update: ReminderPreviousScheduleUpdate,
   ): Promise<Reminder | null>;
-  markExpired(id: string): Promise<void>;
+  markExpired(id: string, now: Date): Promise<void>;
+  deleteExpiredWithNotice(ids: string[], now: Date): Promise<number>;
+  listDepartureNotices(): Promise<ReminderDepartureNotice[]>;
+  acknowledgeDepartureNotices(ids: string[]): Promise<void>;
   deleteMany(ids: string[]): Promise<void>;
   deleteById(id: string): Promise<void>;
 };

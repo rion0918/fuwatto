@@ -43,6 +43,6 @@ test('database startup applies notification permission compatibility after migra
     /ADD COLUMN notification_permission_intro_seen INTEGER NOT NULL DEFAULT 0/,
     /ADD COLUMN analytics_consent TEXT NOT NULL DEFAULT 'unknown'/,
     /PRAGMA user_version = 6/,
-    /await runDatabaseMigrations\(database\);\s+await initializeNotificationPermissionCompatibility\(database\);/,
+    /await runDatabaseMigrations\(database\);[\s\S]*CREATE TABLE IF NOT EXISTS reminder_departures[\s\S]*await initializeNotificationPermissionCompatibility\(database\);/,
   ]);
 });

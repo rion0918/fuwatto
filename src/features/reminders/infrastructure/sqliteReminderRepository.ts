@@ -1,7 +1,12 @@
 import { and, asc, desc, eq, gt, inArray, lte, or } from 'drizzle-orm';
 
 import { db } from '../../../db/client';
-import { type NewReminderRow, type ReminderRow, reminders } from '../../../db/schema';
+import {
+  type NewReminderRow,
+  type ReminderRow,
+  reminders,
+  reminderDepartures,
+} from '../../../db/schema';
 import { createId } from '../../../shared/utils/id';
 import type { ReminderRepository } from '../application/ports';
 import type { Reminder } from '../domain/reminder';
@@ -139,15 +144,55 @@ export const sqliteReminderRepository: ReminderRepository = {
     return getById(id);
   },
 
-  async markExpired(id) {
+  async markExpired(id, now) {
     await db
       .update(reminders)
       .set({ status: 'expired', updatedAt: new Date().toISOString() })
-      .where(eq(reminders.id, id));
+      .where(
+        and(
+          eq(reminders.id, id),
+          eq(reminders.status, 'active'),
+          lte(reminders.expiresAt, now.toISOString()),
+        ),
+      );
   },
 
   async deleteMany(ids) {
     if (ids.length > 0) await db.delete(reminders).where(inArray(reminders.id, ids));
+  },
+
+  async deleteExpiredWithNotice(ids, now) {
+    if (ids.length === 0) return 0;
+    return db.transaction((transaction) => {
+      const expired = and(
+        inArray(reminders.id, ids),
+        or(eq(reminders.status, 'expired'), lte(reminders.expiresAt, now.toISOString())),
+      );
+      const rows = transaction.select().from(reminders).where(expired).all();
+      if (rows.length === 0) return 0;
+      transaction
+        .insert(reminderDepartures)
+        .values(
+          rows.map((row) => ({
+            id: row.id,
+            title: row.title,
+            allDay: row.allDay,
+            targetAt: row.targetAt,
+          })),
+        )
+        .onConflictDoNothing()
+        .run();
+      return transaction.delete(reminders).where(expired).run().changes;
+    });
+  },
+
+  async listDepartureNotices() {
+    return db.select().from(reminderDepartures).orderBy(desc(reminderDepartures.targetAt));
+  },
+
+  async acknowledgeDepartureNotices(ids) {
+    if (ids.length > 0)
+      await db.delete(reminderDepartures).where(inArray(reminderDepartures.id, ids));
   },
 
   async deleteById(id) {

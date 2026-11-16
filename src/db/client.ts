@@ -107,6 +107,14 @@ export function initializeDatabase(database: MigrationDatabase = sqlite): Promis
 async function initializeDatabaseConnection(database: MigrationDatabase) {
   try {
     await runDatabaseMigrations(database);
+    await database.execAsync(`
+      CREATE TABLE IF NOT EXISTS reminder_departures (
+        id TEXT PRIMARY KEY NOT NULL,
+        title TEXT NOT NULL,
+        all_day INTEGER NOT NULL DEFAULT 0,
+        target_at TEXT NOT NULL
+      );
+    `);
     await initializeNotificationPermissionCompatibility(database);
   } catch (error) {
     console.warn('[DB] Failed to initialize database', {

@@ -33,6 +33,7 @@ export async function runWidgetUpdate(): Promise<void> {
       renderWidget: ({ width, height }) => (
         <PopReminderWidget
           reminders={snapshot.reminders}
+          pastReminderCount={snapshot.pastReminderCount}
           theme={snapshot.theme}
           widgetWidth={width}
           widgetHeight={height}

@@ -32,6 +32,7 @@ export type WidgetLayoutPlan = {
   addButton: WidgetRect;
   hero: WidgetReminderLayout | null;
   allDaySummary: (WidgetRect & { text: string }) | null;
+  pastSummary: (WidgetRect & { count: number }) | null;
   queueBounds: WidgetRect;
   queueRows: WidgetReminderLayout[];
 };
@@ -68,8 +69,10 @@ export function getWidgetLayoutPlan(
   widgetWidth: number,
   widgetHeight: number,
   now = new Date(),
+  pastReminderCount = reminders.filter((reminder) => reminder.isExpired).length,
 ): WidgetLayoutPlan {
-  const todayReminders = reminders.filter(
+  const upcomingReminders = reminders.filter((reminder) => !reminder.isExpired);
+  const todayReminders = upcomingReminders.filter(
     (reminder) =>
       !reminder.isExpired && reminder.targetAt && isSameLocalDay(new Date(reminder.targetAt), now),
   );
@@ -77,13 +80,13 @@ export function getWidgetLayoutPlan(
   const nextTimed = todayReminders
     .filter((reminder) => !reminder.allDay && new Date(reminder.targetAt ?? '') > now)
     .sort((first, second) => (first.targetAt ?? '').localeCompare(second.targetAt ?? ''))[0];
-  const heroReminder = nextTimed ?? todayAllDay[0] ?? reminders[0];
+  const heroReminder = nextTimed ?? todayAllDay[0] ?? upcomingReminders[0];
   const summarizeAllDay = Boolean(nextTimed && todayAllDay.length);
   const todayAllDayIds = new Set(todayAllDay.map((reminder) => reminder.id));
   const orderedReminders = heroReminder
     ? [
         heroReminder,
-        ...reminders.filter(
+        ...upcomingReminders.filter(
           (reminder) =>
             reminder.id !== heroReminder.id &&
             !(summarizeAllDay && todayAllDayIds.has(reminder.id)),
@@ -96,7 +99,16 @@ export function getWidgetLayoutPlan(
   const width = Math.max(0, widgetWidth - padding * 2);
   const header = makeRect(padding, padding, width, compact ? 18 : 24);
   const addHeight = compact ? 48 : 54;
-  const addButton = makeRect(padding, widgetHeight - padding - addHeight, width, addHeight);
+  const footerTop = widgetHeight - padding - addHeight;
+  const addWidth = pastReminderCount > 0 ? 72 : width;
+  const addButton = makeRect(padding + width - addWidth, footerTop, addWidth, addHeight);
+  const pastSummary =
+    pastReminderCount > 0
+      ? {
+          ...makeRect(padding, footerTop, Math.max(0, width - addWidth - 8), addHeight),
+          count: pastReminderCount,
+        }
+      : null;
   const contentTop = header.bottom + (compact ? (summarizeAllDay ? 0 : 6) : 10);
   const contentBottom = addButton.top - 8;
   const hero = heroReminder
@@ -136,6 +148,7 @@ export function getWidgetLayoutPlan(
     addButton,
     hero,
     allDaySummary,
+    pastSummary,
     queueBounds,
     queueRows: makeQueueRows(visibleReminderIds.slice(1), queueBounds),
   };

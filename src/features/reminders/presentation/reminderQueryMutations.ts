@@ -3,6 +3,7 @@ import type { QueryClient } from '@tanstack/react-query';
 import type { Reminder } from '../domain/reminder';
 
 export const activeRemindersQueryKey = ['reminders', 'active'] as const;
+export const departureNoticesQueryKey = ['reminders', 'departures'] as const;
 
 export function removeRemindersFromQueryCache(queryClient: QueryClient, ids: string[]) {
   const idSet = new Set(ids);

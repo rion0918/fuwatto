@@ -24,7 +24,7 @@ test('published privacy policy documents local data, analytics, and purchases', 
 
   assert.match(privacy, /<meta name="viewport"/);
   assert.match(privacy, /プライバシーポリシー/);
-  assert.match(privacy, /最終更新日：2026年11月14日/);
+  assert.match(privacy, /最終更新日：2026年11月17日/);
   assert.match(privacy, /端末内に保存/);
   assert.match(privacy, /PostHog US\s+Cloud/);
   assert.match(privacy, /RevenueCat/);
@@ -45,7 +45,7 @@ test('published terms document the lifetime Pro purchase contract', () => {
 
   assert.match(terms, /<meta name="viewport"/);
   assert.match(terms, /利用規約/);
-  assert.match(terms, /最終更新日：2026年9月7日/);
+  assert.match(terms, /最終更新日：2026年11月17日/);
   assert.match(terms, /同時に6件まで/);
   assert.match(terms, /買い切り商品/);
   assert.match(terms, /忘れたくないことを無制限に追加できる/);
@@ -101,7 +101,8 @@ test('web and in-app terms explain voice confirmation, expired data, and statuto
   ]) {
     const terms = readLegalPage(path);
     assert.match(terms, /認識結果と日時を確認/);
-    assert.match(terms, /自動整理は初期状態でON/);
+    assert.match(terms, /予定日時を過ぎたリマインダーも、手動で削除するまで端末内に保持/);
+    assert.doesNotMatch(terms, /自動整理は初期状態でON/);
     assert.match(terms, /6件を超えて登録済みのデータを削除・非表示にはしません/);
     assert.match(terms, /消費者契約法/);
     assert.match(terms, /日本法に準拠/);

@@ -21,6 +21,8 @@ import {
 import type { BubbleDeleteMotionPhase } from '../components/ReminderBubble';
 import { ReminderBubbleBoard, type BubbleDeleteMotion } from '../components/ReminderBubbleBoard';
 import { ReminderDetailSheet } from '../components/ReminderDetailSheet';
+import { ReminderDepartureSheet } from '../components/ReminderDepartureSheet';
+import { ReminderReviewEntry } from '../components/ReminderReviewEntry';
 import { ReminderInputSheet } from '../components/ReminderInputSheet';
 import { NotificationPermissionIntroModal } from '../components/NotificationPermissionIntroModal';
 import {
@@ -38,7 +40,7 @@ import {
   type QuickAddInputMode,
   useReminderUiStore,
 } from '../stores/reminderUiStore';
-import type { Reminder } from '../domain/reminder';
+import { isReminderExpired, type Reminder } from '../domain/reminder';
 import { useAppServices } from '../../../bootstrap/appServicesContext';
 import { useAppSettingsQuery as useAppSettings } from '../../settings/presentation/useAppSettingsQuery';
 import { AppScreen } from '../../../shared/components/AppScreen';
@@ -96,6 +98,11 @@ export function HomeScreen() {
   const { width: windowWidth } = useWindowDimensions();
   const {
     reminders,
+    departureNotices,
+    departureNoticeError,
+    refreshDepartureNotices,
+    acknowledgeDepartureNotices,
+    isAcknowledgingDepartures,
     loading,
     error,
     refresh,
@@ -155,6 +162,7 @@ export function HomeScreen() {
     resolve: (permissionMode: NotificationPermissionMode) => void;
   } | null>(null);
   const [selectedReminderId, setSelectedReminderId] = useState<string | null>(null);
+  const [isDepartureSheetOpen, setIsDepartureSheetOpen] = useState(false);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedReminderIds, setSelectedReminderIds] = useState<Set<string>>(() => new Set());
   const [isBulkDeletionInProgress, setIsBulkDeletionInProgress] = useState(false);
@@ -210,18 +218,26 @@ export function HomeScreen() {
   }, [isRaiseToSpeakCalibrating]);
 
   const selectedReminder = reminders.find((r) => r.id === selectedReminderId) || null;
-  const activeReminderCount = reminders.filter(
-    (reminder) =>
-      reminder.status === 'active' && new Date(reminder.expiresAt).getTime() > Date.now(),
-  ).length;
-  const [visibleReminderIds, setVisibleReminderIds] = useState<Set<string>>(
-    () => new Set(reminders.slice(0, MAX_VISIBLE_HOME_BUBBLES).map((reminder) => reminder.id)),
+  const { upcomingReminders, pastReminders } = useMemo(() => {
+    const now = new Date();
+    return {
+      upcomingReminders: reminders.filter((reminder) => !isReminderExpired(reminder, now)),
+      pastReminders: reminders.filter((reminder) => isReminderExpired(reminder, now)),
+    };
+  }, [reminders]);
+  const activeReminderCount = upcomingReminders.length;
+  const visibleReminderIdsRef = useRef<Set<string>>(
+    new Set(upcomingReminders.slice(0, MAX_VISIBLE_HOME_BUBBLES).map((reminder) => reminder.id)),
   );
   const selectedCount = selectedReminderIds.size;
-  const allRemindersSelected = reminders.length > 0 && selectedCount === reminders.length;
+  const allRemindersSelected =
+    upcomingReminders.length > 0 && selectedCount === upcomingReminders.length;
   const isSelectionBusy = isDeletingReminders || isBulkDeletionInProgress;
 
   const [deleteMotion, setDeleteMotion] = useState<BubbleDeleteMotion | null>(null);
+  const openPastReminders = useCallback(() => {
+    router.push({ pathname: '/reminders-list', params: { filter: 'past' } });
+  }, [router]);
 
   const openQuickAddForSource = useCallback(
     (source: QuickAddSource, options?: QuickAddOptions) => {
@@ -309,17 +325,17 @@ export function HomeScreen() {
   }, [isSelectionMode]);
 
   useEffect(() => {
-    const reminderIds = new Set(reminders.map((reminder) => reminder.id));
+    const reminderIds = new Set(upcomingReminders.map((reminder) => reminder.id));
     setSelectedReminderIds((current) => {
       const next = new Set([...current].filter((id) => reminderIds.has(id)));
       return next.size === current.size ? current : next;
     });
-  }, [reminders]);
+  }, [upcomingReminders]);
 
   useEffect(() => {
     if (
       isOnboardingGatePending ||
-      routeParams.action !== 'add' ||
+      (routeParams.action !== 'add' && routeParams.action !== 'past') ||
       !routeParams.intent ||
       consumedIntentRef.current === routeParams.intent ||
       loading
@@ -329,8 +345,17 @@ export function HomeScreen() {
     consumedIntentRef.current = routeParams.intent;
     if (routeParams.action === 'add') {
       void requestQuickAdd('widget_deep_link', { focusTitle: true });
+    } else {
+      openPastReminders();
     }
-  }, [isOnboardingGatePending, loading, reminders, requestQuickAdd, routeParams]);
+  }, [
+    isOnboardingGatePending,
+    loading,
+    reminders,
+    requestQuickAdd,
+    routeParams,
+    openPastReminders,
+  ]);
 
   const refreshWidgetReminders = useCallback(async () => {
     const result = await refresh();
@@ -415,10 +440,7 @@ export function HomeScreen() {
   );
 
   const handleVisibleReminderIdsChange = useCallback((ids: string[]) => {
-    setVisibleReminderIds((current) => {
-      if (current.size === ids.length && ids.every((id) => current.has(id))) return current;
-      return new Set(ids);
-    });
+    visibleReminderIdsRef.current = new Set(ids);
   }, []);
 
   const toggleSelectAll = useCallback(() => {
@@ -426,9 +448,9 @@ export function HomeScreen() {
 
     void triggerReminderSelectionHaptic();
     setSelectedReminderIds(
-      allRemindersSelected ? new Set() : new Set(reminders.map((reminder) => reminder.id)),
+      allRemindersSelected ? new Set() : new Set(upcomingReminders.map((reminder) => reminder.id)),
     );
-  }, [allRemindersSelected, isSelectionBusy, reminders]);
+  }, [allRemindersSelected, isSelectionBusy, upcomingReminders]);
 
   useFocusEffect(
     useCallback(() => {
@@ -708,7 +730,7 @@ export function HomeScreen() {
         analytics.captureReminderDeleted({ surface: 'home', count: deletedIds.length });
         const motions = makeBulkDeleteMotions(deletedIds);
         const visibleMotions = motions.filter((motion) =>
-          visibleReminderIds.has(motion.reminderId),
+          visibleReminderIdsRef.current.has(motion.reminderId),
         );
         const motionCompletion = Promise.all(
           visibleMotions.map((motion) => waitForDeleteMotion(motion.reminderId, motion.phase)),
@@ -736,15 +758,7 @@ export function HomeScreen() {
         }
       }
     },
-    [
-      analytics,
-      cancelSelection,
-      deleteReminders,
-      refresh,
-      removeReminders,
-      visibleReminderIds,
-      waitForDeleteMotion,
-    ],
+    [analytics, cancelSelection, deleteReminders, refresh, removeReminders, waitForDeleteMotion],
   );
 
   const handleBulkDeletePress = useCallback(() => {
@@ -771,6 +785,13 @@ export function HomeScreen() {
       isReminderDeletionInProgressRef.current = true;
 
       try {
+        if (isReminderExpired(reminder)) {
+          const deleted = await deleteReminder(reminder.id);
+          if (!deleted) throw new Error('Reminder was not found');
+          analytics.captureReminderDeleted({ surface: 'home', count: 1 });
+          setSelectedReminderId(null);
+          return;
+        }
         setDeleteMotion({ reminderId: reminder.id, phase: 'bursting' });
         const [deleteResult] = await Promise.allSettled([
           deleteReminder(reminder.id, { deferCache: true }),
@@ -1081,6 +1102,7 @@ export function HomeScreen() {
       isSelectionMode ||
       isSelectionBusy ||
       selectedReminder !== null ||
+      isDepartureSheetOpen ||
       isQuickAddPickerOpen ||
       isSaving,
     onStart: handleRaiseToSpeakStart,
@@ -1089,16 +1111,13 @@ export function HomeScreen() {
 
   const isAddButtonDisabled = isSaving;
   const isBubbleIdleDisabled = isSaving;
-  const isEmptyHome = !loading && !error && reminders.length === 0;
-  const nextReminder = reminders.find((reminder) => !reminder.allDay) ?? null;
-  const nextReminderIsExpired = nextReminder
-    ? nextReminder.status === 'expired' || new Date(nextReminder.expiresAt).getTime() <= Date.now()
-    : false;
+  const isEmptyHome = !loading && !error && upcomingReminders.length === 0;
+  const nextReminder = upcomingReminders.find((reminder) => !reminder.allDay) ?? null;
   const nextReminderLabel = nextReminder
     ? formatReminderBubbleDateTime(nextReminder.targetAt, new Date(), nextReminder.allDay)
     : null;
   const nextReminderAccessibilityLabel = nextReminder
-    ? `${nextReminderIsExpired ? '期限済み' : '次のリマインド'}、${nextReminder.title}、${formatReminderDetailAccessibilityDateTime(nextReminder.targetAt, new Date(), nextReminder.allDay)}`
+    ? `次のリマインド、${nextReminder.title}、${formatReminderDetailAccessibilityDateTime(nextReminder.targetAt, new Date(), nextReminder.allDay)}`
     : undefined;
   const isCompactPhoneWidth = windowWidth <= 360;
 
@@ -1161,9 +1180,34 @@ export function HomeScreen() {
         </View>
       </View>
 
+      {departureNoticeError && !isOnboardingGatePending && !isSelectionMode ? (
+        <Pressable
+          cssInterop={false}
+          accessibilityRole="button"
+          accessibilityLabel="空へかえった泡を再読み込み"
+          onPress={() => void refreshDepartureNotices()}
+          style={styles.departureError}
+        >
+          <Text accessibilityRole="alert" style={styles.departureErrorText}>
+            {departureNoticeError}
+          </Text>
+          <Text style={styles.departureRetry}>再読み込み</Text>
+        </Pressable>
+      ) : null}
+      {departureNotices.length > 0 && !isOnboardingGatePending && !isSelectionMode ? (
+        <ReminderReviewEntry
+          kind="departed"
+          count={departureNotices.length}
+          preview={`${departureNotices[0].title}${departureNotices.length > 1 ? ` ほか${departureNotices.length - 1}件` : ''}`}
+          onPress={() => setIsDepartureSheetOpen(true)}
+          disabled={isSaving || isSelectionBusy}
+        />
+      ) : null}
+
       {nextReminder ? (
         <View className="mt-[18px] shrink-0">
           <Pressable
+            cssInterop={false}
             accessibilityRole="button"
             accessibilityLabel={nextReminderAccessibilityLabel}
             accessibilityHint="詳細を開きます"
@@ -1186,9 +1230,7 @@ export function HomeScreen() {
                 <Ionicons name="notifications-outline" size={19} color={palette.lavenderDeep} />
               </View>
               <View style={styles.nextReminderContent}>
-                <Text style={styles.nextReminderKicker}>
-                  {nextReminderIsExpired ? '期限済み' : '次のリマインド'}
-                </Text>
+                <Text style={styles.nextReminderKicker}>次のリマインド</Text>
                 <Text numberOfLines={1} ellipsizeMode="tail" style={styles.nextReminderTitle}>
                   {nextReminder.title}
                 </Text>
@@ -1205,7 +1247,7 @@ export function HomeScreen() {
         style={[styles.bubbleBoardContainer, isEmptyHome ? styles.bubbleBoardContainerEmpty : null]}
       >
         <ReminderBubbleBoard
-          reminders={reminders}
+          reminders={upcomingReminders}
           loading={loading}
           error={error}
           selectedReminderId={selectedReminderId}
@@ -1225,7 +1267,23 @@ export function HomeScreen() {
           emptyDisabled={isAddButtonDisabled}
           verticalLayoutMode="homeTimeline"
         />
+        {pastReminders.length > 0 && !isSelectionMode && !loading && !error ? (
+          <ReminderReviewEntry
+            kind="past"
+            count={pastReminders.length}
+            onPress={openPastReminders}
+            disabled={isSaving || isSelectionBusy}
+          />
+        ) : null}
       </View>
+
+      <ReminderDepartureSheet
+        visible={isDepartureSheetOpen}
+        notices={departureNotices}
+        acknowledging={isAcknowledgingDepartures}
+        onConfirm={acknowledgeDepartureNotices}
+        onClose={() => setIsDepartureSheetOpen(false)}
+      />
 
       <ReminderInputSheet
         defaultTargetTime={getQuickAddDefaultTime()}
@@ -1353,6 +1411,23 @@ export function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
+  departureError: {
+    marginTop: 14,
+    padding: 14,
+    minHeight: 48,
+    borderRadius: 18,
+    backgroundColor: palette.white,
+    borderWidth: 1,
+    borderColor: palette.line,
+  },
+  departureErrorText: { fontSize: 13, lineHeight: 20, color: palette.inkSecondary },
+  departureRetry: {
+    fontSize: 14,
+    lineHeight: 22,
+    fontWeight: '700',
+    color: palette.lavenderDeep,
+    marginTop: 4,
+  },
   ambientOne: {
     top: 116,
     right: -28,

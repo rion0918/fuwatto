@@ -26,6 +26,7 @@ import {
 
 type PopReminderWidgetProps = {
   reminders: WidgetReminder[];
+  pastReminderCount?: number;
   theme?: AppTheme;
   widgetWidth?: number;
   widgetHeight?: number;
@@ -111,7 +112,7 @@ function ReminderRow({
   highlighted: boolean;
 }) {
   const typography = getWidgetTypography(mode);
-  const timeText = `${reminder.isExpired ? '期限済み · ' : ''}${formatReminderBubbleDateTime(reminder.targetAt, new Date(), reminder.allDay)}`;
+  const timeText = formatReminderBubbleDateTime(reminder.targetAt, new Date(), reminder.allDay);
   if (!highlighted) {
     return (
       <FlexWidget
@@ -238,7 +239,7 @@ function EmptyState({ bounds, theme }: { bounds: WidgetRect; theme: WidgetThemeT
       }}
     >
       <TextWidget
-        text="リマインダーはありません"
+        text="これからの予定はありません"
         style={{
           fontFamily: WIDGET_FONT_FAMILY,
           fontSize: 14,
@@ -288,21 +289,27 @@ function AddReminderButton({
       >
         <TextWidget
           text="＋"
-          style={{ fontSize: 24, color: theme.addButtonText as ColorProp, marginRight: 6 }}
-          maxLines={1}
-          allowFontScaling={false}
-        />
-        <TextWidget
-          text="追加する"
           style={{
-            fontFamily: WIDGET_FONT_FAMILY,
-            fontSize: getWidgetTypography(mode).addFontSize,
-            fontWeight: '600',
+            fontSize: layout.width < 100 ? 30 : 24,
             color: theme.addButtonText as ColorProp,
+            marginRight: layout.width < 100 ? 0 : 6,
           }}
           maxLines={1}
           allowFontScaling={false}
         />
+        {layout.width >= 100 ? (
+          <TextWidget
+            text="追加する"
+            style={{
+              fontFamily: WIDGET_FONT_FAMILY,
+              fontSize: getWidgetTypography(mode).addFontSize,
+              fontWeight: '600',
+              color: theme.addButtonText as ColorProp,
+            }}
+            maxLines={1}
+            allowFontScaling={false}
+          />
+        ) : null}
       </FlexWidget>
       <FlexWidget
         style={{
@@ -321,11 +328,18 @@ function AddReminderButton({
 
 export function PopReminderWidget({
   reminders,
+  pastReminderCount,
   theme = 'lavender',
   widgetWidth = WIDGET_DEFAULT_WIDTH,
   widgetHeight = WIDGET_DEFAULT_HEIGHT,
 }: PopReminderWidgetProps) {
-  const plan = getWidgetLayoutPlan(reminders, widgetWidth, widgetHeight);
+  const plan = getWidgetLayoutPlan(
+    reminders,
+    widgetWidth,
+    widgetHeight,
+    new Date(),
+    pastReminderCount,
+  );
   const colors = getWidgetTheme(theme);
   const remindersById = new Map(reminders.map((reminder) => [reminder.id, reminder]));
   const rows = plan.hero ? [plan.hero, ...plan.queueRows] : [];
@@ -355,7 +369,7 @@ export function PopReminderWidget({
       <WidgetHeader
         layout={plan.header}
         mode={plan.mode}
-        hasReminders={reminders.length > 0}
+        hasReminders={Boolean(plan.hero)}
         theme={colors}
       />
       {rows.map((layout, index) => {
@@ -396,7 +410,37 @@ export function PopReminderWidget({
           />
         </FlexWidget>
       ) : null}
-      {reminders.length === 0 ? <EmptyState bounds={plan.queueBounds} theme={colors} /> : null}
+      {!plan.hero ? <EmptyState bounds={plan.queueBounds} theme={colors} /> : null}
+      {plan.pastSummary ? (
+        <FlexWidget
+          style={{
+            width: plan.pastSummary.width,
+            height: plan.pastSummary.height,
+            marginTop: plan.pastSummary.top,
+            marginLeft: plan.pastSummary.left,
+            borderRadius: 18,
+            borderWidth: 1,
+            borderColor: colors.surfaceBorder as ColorProp,
+            justifyContent: 'center',
+            paddingHorizontal: 10,
+          }}
+          clickAction="OPEN_URI"
+          clickActionData={{ uri: 'popreminder://?action=past' }}
+          accessibilityLabel={`過ぎた予定、${plan.pastSummary.count}件を開く`}
+        >
+          <TextWidget
+            text={`過ぎた予定  ${plan.pastSummary.count}件 ›`}
+            style={{
+              fontFamily: WIDGET_FONT_FAMILY,
+              fontSize: 13,
+              color: colors.secondaryText as ColorProp,
+            }}
+            maxLines={1}
+            truncate="END"
+            allowFontScaling={false}
+          />
+        </FlexWidget>
+      ) : null}
       <AddReminderButton layout={plan.addButton} mode={plan.mode} theme={colors} />
     </OverlapWidget>
   );

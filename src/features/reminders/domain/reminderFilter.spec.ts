@@ -25,3 +25,14 @@ test('search filter normalizes title text and applies the selected date range', 
   assert.deepEqual(filterReminders([baseReminder], '', 'today', now), []);
   assert.deepEqual(filterReminders([baseReminder], '', 'week', now), [baseReminder]);
 });
+
+test('past view separates expired status and crossed deadlines from upcoming plans', () => {
+  const now = new Date('2026-07-13T12:00:00+09:00');
+  const elapsed = { ...baseReminder, id: 'elapsed', expiresAt: now.toISOString() };
+  const retained = { ...baseReminder, id: 'retained', status: 'expired' as const };
+  assert.deepEqual(filterReminders([baseReminder, elapsed, retained], '', 'past', now), [
+    elapsed,
+    retained,
+  ]);
+  assert.deepEqual(filterReminders([baseReminder, elapsed, retained], 'retained', 'past', now), []);
+});

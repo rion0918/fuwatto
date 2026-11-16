@@ -3,7 +3,10 @@ import { AppState } from 'react-native';
 import { usePathname } from 'expo-router';
 import { focusManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-import { activeRemindersQueryKey } from '../features/reminders/presentation/reminderQueryMutations';
+import {
+  activeRemindersQueryKey,
+  departureNoticesQueryKey,
+} from '../features/reminders/presentation/reminderQueryMutations';
 import { AnalyticsConsentGate } from '../features/settings/components/AnalyticsConsentGate';
 import { appServices } from './appServices';
 import { AppServicesProvider } from './appServicesContext';
@@ -51,6 +54,7 @@ export function AppProviders({ children }: PropsWithChildren) {
         .finally(() => {
           focusManager.setFocused(true);
           void queryClient.invalidateQueries({ queryKey: activeRemindersQueryKey });
+          void queryClient.invalidateQueries({ queryKey: departureNoticesQueryKey });
         });
       void appServices.reminders.retryPendingNotifications().catch((error) => {
         console.warn('Failed to retry pending reminder notifications after app resume', error);

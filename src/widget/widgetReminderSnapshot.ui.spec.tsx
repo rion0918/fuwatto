@@ -1,11 +1,13 @@
 import { DatabaseSync, type SQLInputValue } from 'node:sqlite';
 
 const mockGetSettings = jest.fn(() => ({ theme: 'mint', auto_delete_enabled: 1 }));
+const mockGetCount = jest.fn((_sql: string, _params: SQLInputValue[]) => ({ count: 0 }));
 const mockInitialize = jest.fn(async () => {});
 const mockGetAll = jest.fn((_sql: string, _params: SQLInputValue[]) => [] as unknown[]);
 const mockOpen = jest.fn((..._args: unknown[]) => ({
   getAllSync: mockGetAll,
-  getFirstSync: mockGetSettings,
+  getFirstSync: (sql: string, params: SQLInputValue[]) =>
+    sql.includes('COUNT(*)') ? mockGetCount(sql, params) : mockGetSettings(),
 }));
 jest.mock('expo-sqlite', () => ({ openDatabaseSync: (...args: unknown[]) => mockOpen(...args) }));
 jest.mock('../db/client', () => ({
@@ -25,7 +27,7 @@ test('widget uses the application database directory with a dedicated initialize
     { useNewConnection: true },
     'file:///app/SQLite',
   );
-  expect(result).toEqual({ reminders: [], theme: 'mint' });
+  expect(result).toEqual({ reminders: [], pastReminderCount: 0, theme: 'mint' });
 });
 
 test('database read failure is not treated as a successful empty snapshot', async () => {
@@ -76,6 +78,9 @@ test.each([0, 1])(
     );
     mockGetSettings.mockReturnValue({ theme: 'mint', auto_delete_enabled: autoDeleteEnabled });
     mockGetAll.mockImplementation((sql, params) => database.prepare(sql).all(...params));
+    mockGetCount.mockImplementation(
+      (sql, params) => database.prepare(sql).get(...params) as { count: number },
+    );
     try {
       const snapshot = await getWidgetSnapshot(new Date(2030, 4, 12, 10));
       expect(
@@ -87,13 +92,46 @@ test.each([0, 1])(
         isExpired: false,
       });
       expect(snapshot.reminders.some((reminder) => reminder.id === 'tomorrow')).toBe(true);
-      expect(snapshot.reminders.filter((reminder) => reminder.isExpired)).toHaveLength(
-        autoDeleteEnabled ? 0 : 2,
-      );
+      expect(snapshot.pastReminderCount).toBe(2);
+      expect(snapshot.reminders.filter((reminder) => reminder.isExpired)).toHaveLength(0);
     } finally {
       database.close();
       mockGetAll.mockReset().mockReturnValue([]);
+      mockGetCount.mockReset().mockReturnValue({ count: 0 });
       mockGetSettings.mockReturnValue({ theme: 'mint', auto_delete_enabled: 1 });
     }
   },
 );
+
+test('the past count includes every retained row rather than the 20-row widget display limit', async () => {
+  const database = new DatabaseSync(':memory:');
+  database.exec(`CREATE TABLE reminders (id TEXT, title TEXT, all_day INTEGER, target_at TEXT,
+    target_notify_at TEXT, expires_at TEXT, status TEXT)`);
+  for (let i = 0; i < 37; i += 1) {
+    database
+      .prepare('INSERT INTO reminders VALUES (?, ?, 0, ?, ?, ?, ?)')
+      .run(
+        `past-${i}`,
+        `残した予定${i}`,
+        '2000-01-01',
+        '2000-01-01',
+        '2000-01-01',
+        i % 2 ? 'active' : 'expired',
+      );
+  }
+  mockGetSettings.mockReturnValue({ theme: 'mint', auto_delete_enabled: 0 });
+  mockGetAll.mockImplementation((sql, params) => database.prepare(sql).all(...params));
+  mockGetCount.mockImplementation(
+    (sql, params) => database.prepare(sql).get(...params) as { count: number },
+  );
+  try {
+    const snapshot = await getWidgetSnapshot(new Date('2030-05-12T10:00:00.000Z'));
+    expect(snapshot.reminders).toEqual([]);
+    expect(snapshot.pastReminderCount).toBe(37);
+  } finally {
+    database.close();
+    mockGetAll.mockReset().mockReturnValue([]);
+    mockGetCount.mockReset().mockReturnValue({ count: 0 });
+    mockGetSettings.mockReturnValue({ theme: 'mint', auto_delete_enabled: 1 });
+  }
+});

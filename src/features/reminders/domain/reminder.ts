@@ -30,6 +30,15 @@ export type CreateReminderDraft = Pick<
   'title' | 'allDay' | 'targetAt' | 'previousNotifyAt' | 'targetNotifyAt' | 'expiresAt'
 >;
 
+export type ReminderDepartureNotice = Pick<Reminder, 'id' | 'title' | 'targetAt' | 'allDay'>;
+
+export function isReminderExpired(
+  reminder: Pick<Reminder, 'status' | 'expiresAt'>,
+  now = new Date(),
+) {
+  return reminder.status === 'expired' || new Date(reminder.expiresAt).getTime() <= now.getTime();
+}
+
 export function normalizeReminderTitle(title: string) {
   const normalized = title.trim();
 

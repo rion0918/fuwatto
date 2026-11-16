@@ -18,7 +18,7 @@ import type {
   UpdateReminderScheduleInput,
   UpdateReminderScheduleResult,
 } from '../application/reminderUseCases';
-import type { Reminder } from '../domain/reminder';
+import { isReminderExpired, type Reminder } from '../domain/reminder';
 import { reminderTitleSchema } from '../schemas/reminderSchema';
 import {
   ImeSafeReminderTitleInput,
@@ -74,6 +74,11 @@ function NotificationTimeline({
 
   return (
     <View style={styles.scheduleSection}>
+      {isReminderExpired(reminder) ? (
+        <Text style={styles.pastScheduleNotice}>
+          予定の時刻を過ぎています。日時を変えて、また泡を浮かべられます。
+        </Text>
+      ) : null}
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="予定日時を編集"
@@ -554,6 +559,12 @@ export function ReminderDetailSheet({
 }
 
 const styles = StyleSheet.create({
+  pastScheduleNotice: {
+    fontSize: 13,
+    lineHeight: 21,
+    color: palette.inkSecondary,
+    marginBottom: 12,
+  },
   sheetBackground: {
     backgroundColor: palette.white,
     borderTopLeftRadius: 28,
