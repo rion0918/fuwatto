@@ -844,7 +844,7 @@ export function SettingsScreen() {
                 />
               )}
             </SettingRow>
-            <SettingsVoicePreview enabled={settings.raiseToSpeakEnabled} />
+            <SettingsVoicePreview />
           </SettingsSection>
           <View style={styles.informationHeading}>
             <Text accessibilityRole="header" className="text-[16px] font-bold text-app-ink">

@@ -176,7 +176,7 @@ export function SettingsNotificationTimeline({
   );
 }
 
-export function SettingsVoicePreview({ enabled }: { enabled: boolean }) {
+export function SettingsVoicePreview() {
   return (
     <View style={styles.voicePreview}>
       <View
@@ -191,14 +191,6 @@ export function SettingsVoicePreview({ enabled }: { enabled: boolean }) {
         <View style={{ transform: [{ rotate: '20deg' }] }}>
           <Ionicons name="phone-portrait-outline" size={22} color={palette.lavenderDeep} />
         </View>
-      </View>
-      <View style={styles.voiceLabel}>
-        <Ionicons
-          name={enabled ? 'mic' : 'mic-outline'}
-          size={18}
-          color={enabled ? palette.mintDeep : palette.inkSecondary}
-        />
-        <Text style={styles.voiceText}>{enabled ? '傾けて話す' : '傾けて音声入力'}</Text>
       </View>
     </View>
   );
@@ -318,10 +310,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 14,
     marginTop: 6,
   },
   phones: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  voiceLabel: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  voiceText: { fontSize: 13, fontWeight: '600', color: palette.inkSecondary },
 });

@@ -308,7 +308,8 @@ describe('SettingsScreen raise-to-speak setup', () => {
     expect(view.queryByText('泡と音声入力')).toBeNull();
     expect(view.queryByLabelText('自動消滅')).toBeNull();
     expect(view.getByLabelText('左右に傾けて音声入力')).toBeOnTheScreen();
-    expect(view.getByText('傾けて音声入力', { exact: true })).toBeOnTheScreen();
+    expect(view.queryByText('傾けて音声入力', { exact: true })).toBeNull();
+    expect(view.queryByText('傾けて話す', { exact: true })).toBeNull();
     view.unmount();
   });
 
