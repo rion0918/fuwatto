@@ -23,6 +23,7 @@ export async function prepareAppData() {
     console.warn('Failed to migrate legacy notification channels', error);
   }
   await appServices.reminders.cleanup();
+  await appServices.storeReview.ensureFirstSeen();
   try {
     await appServices.reminders.retryPendingNotifications();
   } catch (error) {

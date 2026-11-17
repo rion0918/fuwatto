@@ -115,6 +115,15 @@ async function initializeDatabaseConnection(database: MigrationDatabase) {
         target_at TEXT NOT NULL
       );
     `);
+    await database.execAsync(`
+      CREATE TABLE IF NOT EXISTS store_review_state (
+        id TEXT PRIMARY KEY NOT NULL,
+        first_seen_at TEXT,
+        success_count INTEGER NOT NULL DEFAULT 0,
+        prompt_count INTEGER NOT NULL DEFAULT 0,
+        last_prompt_at TEXT
+      );
+    `);
     await initializeNotificationPermissionCompatibility(database);
   } catch (error) {
     console.warn('[DB] Failed to initialize database', {

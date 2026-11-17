@@ -683,6 +683,17 @@ Development Build に検証用の `EXPO_PUBLIC_POSTHOG_API_KEY` と US Cloud hos
 - 購入・復元・キャンセル・エラー・権利取消のいずれでもリマインダーデータを失わない
 - RevenueCat Customer画面の匿名ユーザー、`fuwatto_pro_lifetime`、`pro` entitlementが一致する
 
+### 15.3 アプリ内ストアレビュー（Store Review）
+
+`expo-store-review` によるアプリ内レビューはネイティブストアAPIのため、Expo Go ではなく Development Build またはストアの内部テスト／TestFlight ビルドで確認する。Android では Google Play からインストールされたビルドでのみレビューダイアログが表示される場合がある。
+
+- [ ] 初回起動（`first_seen_at` から48時間未満）または成功操作3回未満ではレビュー要求が発生しない
+- [ ] リマインダー作成時に通知許可・通知予約の警告アラートが出た場合や、権限イントロ／傾けて声メモ較正の直後はレビュー要求を行わない
+- [ ] 期限切れ（`過ぎた予定`）リマインダーの削除ではレビュー要求を行わない
+- [ ] 条件（成功3回以上・初回起動から48時間以上・前回から90日以上・要求回数3回未満）を満たした状態で、警告なしに Quick Add を完了して閉じたとき、またはアクティブな泡を削除して破裂モーションが終わったときに、`storeReview.isAvailable()` が true の環境でレビュー API が呼ばれる
+- [ ] OS 側でレビューダイアログが抑制・エラーになった場合も、リマインダーの保存・削除操作やホーム表示が失敗しない
+- [ ] 計測同意済みの場合、要求時にタイトルや日時を含まない `store review requested`（`trigger`, `prompt_count`）だけが送信される
+
 ### Android Widget（Development Build）
 
 Android Widget は Expo Go では確認せず、Widget 対応済みの Development Build をホーム画面へ追加して確認する。先頭の予定を大きな「次のリマインド」、残りをキューとして表示し、下端に横幅いっぱいの「追加する」を固定する。アプリで選択中のsky・lavender・mintテーマを不透明な読み取り面・細いガラスの縁・追加ボタンへ反映する。装飾泡は小さな静止画像とし、壁紙のリアルタイムぼかしは行わない。時間帯別の背景画像やランダム配置は使用しない。AndroidのRemoteViewsは任意の連続アニメーションを実行できず、`updatePeriodMillis` の下限も30分のため、アプリ終了中の期限切れ除外はbest-effortとして扱う。

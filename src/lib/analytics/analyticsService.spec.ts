@@ -62,6 +62,7 @@ test('analytics emits only the approved event schema without reminder content', 
   analytics.captureProGateReached({ source: 'widget_deep_link' });
   analytics.captureProPaywallResult({ placement: 'active_limit', outcome: 'purchased' });
   analytics.captureProRestoreResult({ outcome: 'no-purchase' });
+  analytics.captureStoreReviewRequested({ trigger: 'quick_add_closed', promptCount: 1 });
   const visitId = fake.captured[0].properties?.quick_add_id;
 
   assert.deepEqual(fake.captured, [
@@ -102,6 +103,10 @@ test('analytics emits only the approved event schema without reminder content', 
       properties: { placement: 'active_limit', outcome: 'purchased' },
     },
     { event: 'pro restore result', properties: { outcome: 'no-purchase' } },
+    {
+      event: 'store review requested',
+      properties: { trigger: 'quick_add_closed', prompt_count: 1 },
+    },
   ]);
   assert.deepEqual(
     [...ALLOWED_ANALYTICS_EVENTS],
@@ -122,6 +127,7 @@ test('analytics emits only the approved event schema without reminder content', 
       'pro paywall requested',
       'pro paywall result',
       'pro restore result',
+      'store review requested',
     ],
   );
   assert.equal(isAllowedAnalyticsEvent('$screen'), true);

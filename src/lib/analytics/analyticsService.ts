@@ -50,6 +50,7 @@ export const ALLOWED_ANALYTICS_EVENTS = [
   'pro paywall requested',
   'pro paywall result',
   'pro restore result',
+  'store review requested',
 ] as const;
 
 const allowedAnalyticsEventSet = new Set<string>(ALLOWED_ANALYTICS_EVENTS);
@@ -282,6 +283,16 @@ export function createAnalyticsService<TClient extends AnalyticsClient = Analyti
 
     captureProRestoreResult(input: { outcome: ProRestoreResult }) {
       capture('pro restore result', { outcome: input.outcome });
+    },
+
+    captureStoreReviewRequested(input: {
+      trigger: 'quick_add_closed' | 'bubble_deleted';
+      promptCount: number;
+    }) {
+      capture('store review requested', {
+        trigger: input.trigger,
+        prompt_count: input.promptCount,
+      });
     },
 
     async getCaptureEnabled() {

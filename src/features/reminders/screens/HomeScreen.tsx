@@ -94,6 +94,7 @@ export function HomeScreen() {
   const router = useRouter();
   const { analytics, notificationSettings, purchases } = useAppServices();
   const raiseToSpeak = useAppServices().raiseToSpeak;
+  const storeReview = useAppServices().storeReview;
   const routeParams = useLocalSearchParams<{ action?: string; id?: string; intent?: string }>();
   const { width: windowWidth } = useWindowDimensions();
   const {
@@ -150,6 +151,8 @@ export function HomeScreen() {
   const isSavingRef = useRef(false);
   const isQuickAddRequestPendingRef = useRef(false);
   const quickAddSourceRef = useRef<QuickAddSource>('home_button');
+  const quickAddCreatedCountRef = useRef(0);
+  const quickAddHadAlertRef = useRef(false);
   const raiseSessionActiveRef = useRef(false);
   const selectedReminderRef = useRef<Reminder | null>(null);
   const selectedReminderIdRef = useRef<string | null>(null);
@@ -243,6 +246,8 @@ export function HomeScreen() {
     (source: QuickAddSource, options?: QuickAddOptions) => {
       if (!isQuickAddOpenRef.current) {
         quickAddSourceRef.current = source;
+        quickAddCreatedCountRef.current = 0;
+        quickAddHadAlertRef.current = false;
         analytics.captureQuickAddOpened({ source, inputMode: options?.inputMode ?? 'text' });
       }
       isQuickAddOpenRef.current = true;
@@ -305,8 +310,27 @@ export function HomeScreen() {
 
   useEffect(() => {
     if (!isQuickAddOpen && isQuickAddOpenRef.current) analytics.captureQuickAddClosed();
+    if (!isQuickAddOpen && isQuickAddOpenRef.current && quickAddCreatedCountRef.current > 0) {
+      const createdCount = quickAddCreatedCountRef.current;
+      const hadAlert = quickAddHadAlertRef.current;
+      quickAddCreatedCountRef.current = 0;
+      quickAddHadAlertRef.current = false;
+      void storeReview?.recordQuickAddCompleted(createdCount, {
+        eligibleToPrompt:
+          !hadAlert && !isNotificationPermissionIntroVisible && !isRaiseToSpeakCalibrating,
+      });
+    } else if (!isQuickAddOpen) {
+      quickAddCreatedCountRef.current = 0;
+      quickAddHadAlertRef.current = false;
+    }
     isQuickAddOpenRef.current = isQuickAddOpen;
-  }, [analytics, isQuickAddOpen]);
+  }, [
+    analytics,
+    isNotificationPermissionIntroVisible,
+    isQuickAddOpen,
+    isRaiseToSpeakCalibrating,
+    storeReview,
+  ]);
 
   useEffect(() => {
     selectedReminderRef.current = selectedReminder;
@@ -531,6 +555,7 @@ export function HomeScreen() {
         },
       );
       didCreateReminder = true;
+      quickAddCreatedCountRef.current += 1;
       analytics.captureReminderCreated({
         source: quickAddSourceRef.current,
         datePreset,
@@ -553,11 +578,13 @@ export function HomeScreen() {
           'scheduling-failed': '端末で通知を予約できませんでした。',
         }[result.notification.reason];
 
+        quickAddHadAlertRef.current = true;
         Alert.alert('リマインダーは保存しましたが、通知を予約できませんでした', failureMessage, [
           { text: 'あとで', style: 'cancel' },
           { text: '設定を確認', onPress: () => router.push('/settings') },
         ]);
       } else if (result.notification.status === 'partial') {
+        quickAddHadAlertRef.current = true;
         Alert.alert(
           '前日通知を予約できませんでした',
           '当日の通知は予約されています。端末の通知設定を確認してください。',
@@ -827,11 +854,12 @@ export function HomeScreen() {
         removeReminder(reminder.id);
         setDeleteMotion(null);
         void refresh({ silent: true });
+        void storeReview?.recordBubbleCompleted();
       } finally {
         isReminderDeletionInProgressRef.current = false;
       }
     },
-    [analytics, deleteReminder, refresh, removeReminder, waitForDeleteMotion],
+    [analytics, deleteReminder, refresh, removeReminder, storeReview, waitForDeleteMotion],
   );
 
   const handleCloseReminderDetail = useCallback(

@@ -60,6 +60,7 @@
 | `notification permission updated` | 追加時／設定のOS権限要求が返ったとき。`source=quick_add/settings`、`status`、`can_ask_again`                                                                                       |
 | `pro paywall requested`           | Paywallの表示要求の直前。`placement=active_limit/settings`。実際に画面が表示されたとは限らない                                                                                     |
 | `pro paywall result`              | Paywall処理の結果。`purchased`と`restored`を分け、`not-presented`を表示済みの分母に入れない                                                                                        |
+| `store review requested`          | OS のアプリ内レビューダイアログAPIを呼び出した直後。`trigger=quick_add_closed/bubble_deleted`、`prompt_count`。OS側の表示抑制により実際のダイアログが出たとは限らない              |
 
 `reminder edited`、`reminder deleted`、`pro gate reached`、`pro restore result` は従来の発火点を維持する。削除イベントの回数と削除件数（`count`の合計）は異なる。削除をタスクの完了とは解釈しない。通知の`scheduled`はOSへの予約成功であり、実際の配信・閲覧は計測していない。
 
