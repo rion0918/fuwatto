@@ -1,8 +1,18 @@
 # Android公開前の最終確認
 
-確認日: 2026年11月11日。対象は日本向けAndroid版。
+確認日: 2026年11月16日。対象は日本向けAndroid版。
 
-## 公開判定
+## 2026年11月16日更新
+
+- 運営者から、Play ConsoleのProduction accessが承認済みとの回答を受けた。Play Consoleで対象アプリの製品版リリース作成画面を開けることも確認した。
+- ユーザー向けバージョンを手順書の初回正式版方針に従って`1.0.0`へ揃え、コミット`30d174c`を作成した。Android向けProduction AABはEASビルド`ae051ab6-e717-4f5d-b6ef-e7ec16ed9320`で完了し、コミット`30d174c`、versionCode `55`、versionName `1.0.0`。`eas.json`のProduction提出先設定をコミット`177e32c`に追加し、同コミットまで`origin/main`へpushした。
+- AABは`dist/pop-reminder-android-v55.aab`（250,112,447 bytes、SHA-256 `9b1d81e23cfef03d94b401cf78cd556632103f9c8cfdd6a2a6c1cdb6f520c482`）。Bundle manifestはpackage `com.rion0918.popreminder`、versionName `1.0.0`、versionCode `55`、target SDK `36`を示す。`verify:android:aab`でMoonshineモデル・tokens・LICENSE・NOTICEが元データと一致し、`jarsigner -verify`は終了コード0。Upload証明書SHA-256 `EA:35:A0:37:AB:C8:D8:5C:67:96:D2:C5:15:EF:9E:FD:54:B8:AB:5B:1F:25:8F:DE:09:6F:A9:CA:6E:72:64:15`はEAS Production keystoreの表示と一致する。
+- `pnpm run verify:release`と`pnpm run mvh:verify`は成功。AAB最新候補のAndroid実機QAは未実施。Play Consoleの製品版へ`1.0.0 正式版 (55)`を手動アップロードし、リリースノート「ふわっと。の正式版を公開しました。予定の見やすさと、前日・当日の通知内容を改善しました。」を設定した。公開率100%、全対象国、管理対象公開オフで2026年11月16日に審査へ送信した。送信後の公開概要では「審査中の変更」と表示され、自動チェックの完了待ち。Googleの審査が承認されると全量公開される設定。
+- `eas submit`はGoogle Play提出用サービスアカウント鍵がEASへ未登録のため、AABアップロード開始前に停止した。これはEAS Submitを使う場合の資格情報であり、Play Consoleからの手動アップロードには不要。今回のProductionリリースは手動アップロード経路で審査に送信済み。
+- mainへのpushは成功したが、GitHubはPR必須・必須`MVH verify`未実行を理由に保護ルールを迂回したと応答した。今回の両ローカル検証は成功している。GitHub Actionsの同コミット上の実行結果は未確認。
+- 同日、Google Playから`1.0.0 (55)`の製品版審査について「プライバシー ポリシーが無効（`https://rion0918.github.io/pop-reminder/privacy/`がHTTP 404）」の否承認通知を受領した。GitHubリポジトリ名が`rion0918/pop-reminder`から`rion0918/fuwatto`へ変更されたためGitHub Pagesの配信先が`https://rion0918.github.io/fuwatto/`へ切り替わり、旧URLが404となっていたことが原因。`https://rion0918.github.io/fuwatto/privacy/`および`https://rion0918.github.io/fuwatto/terms/`はHTTP 200で公開中かつリポジトリ内の`docs/privacy/index.html`・`docs/terms/index.html`と一致し、アプリ本体（`src/`）内に旧URLは含まれないため、AABの再ビルドは不要と判断した。Play Consoleの「アプリのコンテンツ → プライバシー ポリシー」を`https://rion0918.github.io/fuwatto/privacy/`に更新・保存し、「公開の概要」から`1.0.0 正式版 (55)`（製品版完全公開）とあわせて2件の変更を審査に再送信した（送信後は「審査中の変更」へ移動し、自動チェック実行中）。
+
+## 11月11日時点の公開判定
 
 最終AABの作成・静的検査と、空のAndroidエミュレーターでの起動確認は完了。11月11日時点でクローズドテスト変更とProduction access申請は審査中。Play経由の購入QAに使う実機がなく、API 36で向き固定が無視される大画面の画面確認も残るため、製品版を公開できる状態とはまだ判定しない。
 

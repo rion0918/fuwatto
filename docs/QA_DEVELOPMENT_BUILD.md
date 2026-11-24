@@ -864,6 +864,19 @@ iOSはWidgetKitのTimelineで予測可能な時刻の表示切り替えと、デ
 - Android 先行で入れた通知・設定導線が iOS リリース時にもそのまま使える
 - iPad最適化、App Store 審査向けの追加申告、文言修正が必要な場合だけ別タスク化する
 
+---
+
+### 19. R8 有効化後のリリース相当ビルド確認
+
+`android.enableMinifyInReleaseBuilds=true` および `proguard-android-optimize.txt` を有効化した Release 相当の Android ビルド（Play 内部テストトラック、または `bundletool` 等で Release AAB から生成した APK）で以下を確認する。
+
+- [ ] ホーム画面の Skia シャボン玉（膜アニメーション・テーマ色・文字描画）が崩れず描画される
+- [ ] Android ホーム画面 Widget の追加・再描画・タップ起動・`action=add` / `action=view` ディープリンクが動作する
+- [ ] 音声入力（OS 標準音声認識および `moonshine-tiny-ja` 端末内認識）が動作する
+- [ ] リマインダーの作成・編集・削除・通知スケジュールと発火が動作する
+- [ ] RevenueCat Paywall 表示と購入復元、PostHog 同意後のイベント送信がクラッシュせず動作する
+- [ ] アプリ内ストアレビュー依頼（条件到達時）がリマインダー操作を阻害せず動作する
+
 **備考欄**
 
 - 差分があった場合、具体的な症状と再現手順を以下に記載してください。

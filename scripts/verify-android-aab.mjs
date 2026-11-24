@@ -37,7 +37,9 @@ function readArtifact(relativePath) {
   return execFileSync('unzip', ['-p', aabPath, relativePath], { maxBuffer });
 }
 
-const entries = execFileSync('unzip', ['-Z1', aabPath], { encoding: 'utf8' }).split(/\r?\n/);
+const entries = execFileSync('unzip', ['-Z1', aabPath], { encoding: 'utf8' })
+  .split(/\r?\n/)
+  .filter(Boolean);
 for (const file of modelFiles) {
   const artifactPath = `${artifactDirectory}/${file.artifact}`;
   if (!entries.includes(artifactPath)) {
@@ -54,4 +56,28 @@ for (const file of modelFiles) {
   console.log(`${artifactPath}: ${actual.byteLength} bytes, SHA-256 ${sha256(actual)}`);
 }
 
-console.log(`Android AAB Moonshine assets verified: ${aabPath}`);
+const proguardMapPath = 'BUNDLE-METADATA/com.android.tools.build.obfuscation/proguard.map';
+if (!entries.includes(proguardMapPath)) {
+  throw new Error(`Missing R8 ProGuard mapping in AAB: ${proguardMapPath}`);
+}
+const proguardMap = readArtifact(proguardMapPath);
+if (proguardMap.byteLength === 0) {
+  throw new Error(`Empty R8 ProGuard mapping in AAB: ${proguardMapPath}`);
+}
+console.log(`${proguardMapPath}: ${proguardMap.byteLength} bytes`);
+
+const dexEntries = entries.filter((entry) => /^base\/dex\/[^/]+\.dex$/.test(entry)).sort();
+if (dexEntries.length === 0) {
+  throw new Error('Missing base/dex/*.dex entries in AAB');
+}
+let totalDexBytes = 0;
+for (const dexEntry of dexEntries) {
+  const dexBytes = readArtifact(dexEntry).byteLength;
+  totalDexBytes += dexBytes;
+  console.log(`${dexEntry}: ${dexBytes} bytes`);
+}
+console.log(
+  `base/dex total: ${totalDexBytes} bytes (${(totalDexBytes / (1024 * 1024)).toFixed(2)} MiB) across ${dexEntries.length} file(s)`,
+);
+
+console.log(`Android AAB Moonshine assets and R8 artifacts verified: ${aabPath}`);
