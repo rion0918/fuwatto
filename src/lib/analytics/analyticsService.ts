@@ -65,6 +65,14 @@ function ignoreAsyncFailure(result: unknown) {
   }
 }
 
+type QuickAddVisit = {
+  id: string;
+  source: QuickAddSource;
+  inputMode: 'text' | 'voice';
+  openedAt: number;
+  createdCount: number;
+};
+
 export function createAnalyticsService<TClient extends AnalyticsClient = AnalyticsClient>(
   source: TClient | null | AnalyticsClientFactory<TClient>,
   options: AnalyticsServiceOptions = {},
@@ -77,13 +85,10 @@ export function createAnalyticsService<TClient extends AnalyticsClient = Analyti
   let consentTransition = Promise.resolve();
   let didCaptureMeasurementStart = false;
   let voiceInputPending = false;
-  let quickAddVisit: {
-    id: string;
-    source: QuickAddSource;
-    inputMode: 'text' | 'voice';
-    openedAt: number;
-    createdCount: number;
-  } | null = null;
+  let pendingEnableRevision: number | null = null;
+  let quickAddVisit: QuickAddVisit | null = null;
+  let pendingQuickAddVisit: QuickAddVisit | null = null;
+  let pendingVoiceInputStart = false;
 
   const canCapture = () => !captureDisabled && client !== null && !client.optedOut;
   const withContext = (properties?: Record<string, unknown>) =>
@@ -140,16 +145,25 @@ export function createAnalyticsService<TClient extends AnalyticsClient = Analyti
     },
 
     captureQuickAddOpened(input: { source: QuickAddSource; inputMode?: 'text' | 'voice' }) {
-      if (!canCapture() || quickAddVisit) return;
-      const openedAt = Date.now();
-      quickAddVisit = {
-        id: `${openedAt.toString(36)}-${Math.random().toString(36).slice(2)}`,
-        source: input.source,
-        inputMode: input.inputMode ?? 'text',
-        openedAt,
-        createdCount: 0,
+      const createVisit = () => {
+        const openedAt = Date.now();
+        return {
+          id: `${openedAt.toString(36)}-${Math.random().toString(36).slice(2)}`,
+          source: input.source,
+          inputMode: input.inputMode ?? 'text',
+          openedAt,
+          createdCount: 0,
+        };
       };
-      capture('quick add opened', quickAddProperties());
+      if (canCapture()) {
+        if (quickAddVisit) return;
+        quickAddVisit = createVisit();
+        capture('quick add opened', quickAddProperties());
+        return;
+      }
+      if (pendingEnableRevision !== null && !quickAddVisit && !pendingQuickAddVisit) {
+        pendingQuickAddVisit = createVisit();
+      }
     },
 
     captureQuickAddSubmitted(input: { datePreset: ReminderDatePreset; allDay: boolean }) {
@@ -161,7 +175,11 @@ export function createAnalyticsService<TClient extends AnalyticsClient = Analyti
     },
 
     captureQuickAddClosed() {
-      if (!quickAddVisit) return;
+      if (!quickAddVisit) {
+        pendingQuickAddVisit = null;
+        pendingVoiceInputStart = false;
+        return;
+      }
       capture('quick add closed', {
         quick_add_id: quickAddVisit.id,
         source: quickAddVisit.source,
@@ -173,10 +191,17 @@ export function createAnalyticsService<TClient extends AnalyticsClient = Analyti
     },
 
     captureVoiceInputStarted() {
-      if (!canCapture() || voiceInputPending) return;
-      voiceInputPending = true;
-      if (quickAddVisit) quickAddVisit.inputMode = 'voice';
-      capture('voice input started', quickAddProperties());
+      if (canCapture()) {
+        if (voiceInputPending) return;
+        voiceInputPending = true;
+        if (quickAddVisit) quickAddVisit.inputMode = 'voice';
+        capture('voice input started', quickAddProperties());
+        return;
+      }
+      if (pendingEnableRevision !== null && !voiceInputPending && !pendingVoiceInputStart) {
+        pendingVoiceInputStart = true;
+        if (pendingQuickAddVisit) pendingQuickAddVisit.inputMode = 'voice';
+      }
     },
 
     captureVoiceInputResult(input: {
@@ -189,7 +214,10 @@ export function createAnalyticsService<TClient extends AnalyticsClient = Analyti
         | 'timeout'
         | 'error';
     }) {
-      if (!voiceInputPending) return;
+      if (!voiceInputPending) {
+        pendingVoiceInputStart = false;
+        return;
+      }
       voiceInputPending = false;
       capture('voice input result', { ...quickAddProperties(), outcome: input.outcome });
     },
@@ -308,11 +336,19 @@ export function createAnalyticsService<TClient extends AnalyticsClient = Analyti
 
     setCaptureEnabled(enabled: boolean) {
       const revision = ++consentRevision;
+      const clearPendingInput = () => {
+        pendingEnableRevision = null;
+        pendingQuickAddVisit = null;
+        pendingVoiceInputStart = false;
+      };
       if (!enabled) {
         captureDisabled = true;
         didCaptureMeasurementStart = false;
         quickAddVisit = null;
         voiceInputPending = false;
+        clearPendingInput();
+      } else {
+        pendingEnableRevision = revision;
       }
 
       const transition = consentTransition.then(async () => {
@@ -329,18 +365,37 @@ export function createAnalyticsService<TClient extends AnalyticsClient = Analyti
 
         try {
           const activeClient = await ensureClient();
-          if (!activeClient) return false;
+          if (!activeClient) {
+            if (pendingEnableRevision === revision) clearPendingInput();
+            return false;
+          }
           await activeClient.ready?.();
           await activeClient.optIn();
           if (revision !== consentRevision) return false;
           captureDisabled = activeClient.optedOut;
-          if (!captureDisabled && !didCaptureMeasurementStart) {
+          if (captureDisabled) {
+            if (pendingEnableRevision === revision) clearPendingInput();
+            return false;
+          }
+          pendingEnableRevision = null;
+          if (!didCaptureMeasurementStart) {
             didCaptureMeasurementStart = true;
             capture('app active', { source: 'measurement_started' });
           }
-          return !captureDisabled;
+          if (pendingQuickAddVisit) {
+            quickAddVisit = pendingQuickAddVisit;
+            pendingQuickAddVisit = null;
+            capture('quick add opened', quickAddProperties());
+          }
+          if (pendingVoiceInputStart) {
+            voiceInputPending = true;
+            pendingVoiceInputStart = false;
+            capture('voice input started', quickAddProperties());
+          }
+          return true;
         } catch {
           captureDisabled = true;
+          if (pendingEnableRevision === revision) clearPendingInput();
           return false;
         }
       });

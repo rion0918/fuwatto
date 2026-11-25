@@ -1,7 +1,12 @@
 import { act, cleanup, fireEvent, render } from '@testing-library/react-native';
+import * as Haptics from 'expo-haptics';
 
 import { useReminderUiStore } from '../stores/reminderUiStore';
 import { ReminderInputSheet } from './ReminderInputSheet';
+
+let mockVoiceListener: ((event: { type: string; [key: string]: unknown }) => void) | null = null;
+const mockCaptureVoiceInputStarted = jest.fn();
+const mockCaptureVoiceInputResult = jest.fn();
 
 jest.mock('react-native-reanimated', () => {
   const React = jest.requireActual<typeof import('react')>('react');
@@ -67,10 +72,19 @@ jest.mock('@react-native-community/datetimepicker', () => {
 });
 
 jest.mock('../../../bootstrap/appServicesContext', () => {
-  const voiceInput = { subscribe: jest.fn(() => ({ remove: jest.fn() })) };
+  const voiceInput = {
+    subscribe: jest.fn((listener: (event: { type: string; [key: string]: unknown }) => void) => {
+      mockVoiceListener = listener;
+      return {
+        remove: jest.fn(() => {
+          if (mockVoiceListener === listener) mockVoiceListener = null;
+        }),
+      };
+    }),
+  };
   const analytics = {
-    captureVoiceInputStarted: jest.fn(),
-    captureVoiceInputResult: jest.fn(),
+    captureVoiceInputStarted: (...args: unknown[]) => mockCaptureVoiceInputStarted(...args),
+    captureVoiceInputResult: (...args: unknown[]) => mockCaptureVoiceInputResult(...args),
   };
   return { useAppServices: () => ({ voiceInput, analytics }) };
 });
@@ -94,6 +108,8 @@ jest.mock('@gorhom/bottom-sheet', () => {
 
 describe('ReminderInputSheet custom time selection', () => {
   beforeEach(() => {
+    jest.clearAllMocks();
+    mockVoiceListener = null;
     jest.useFakeTimers();
     jest.setSystemTime(new Date(2030, 4, 12, 13, 37));
     useReminderUiStore.getState().closeQuickAdd();
@@ -183,5 +199,47 @@ describe('ReminderInputSheet custom time selection', () => {
     expect(useReminderUiStore.getState().timeDigits).toBe('2000');
     expect(useReminderUiStore.getState().timeTouched).toBe(false);
     expect(view.getByRole('button', { name: '追加' })).not.toBeDisabled();
+  });
+
+  it('classifies no-speech as empty with gentle selection haptic while preserving error outcomes', async () => {
+    await act(async () => {
+      useReminderUiStore.getState().openQuickAdd('18:00');
+    });
+    const view = await render(<ReminderInputSheet defaultTargetTime="18:00" onSave={jest.fn()} />);
+
+    expect(mockVoiceListener).not.toBeNull();
+
+    await act(async () => {
+      mockVoiceListener?.({ type: 'error', error: 'no-speech', message: 'no speech detected' });
+    });
+
+    expect(mockCaptureVoiceInputResult).toHaveBeenLastCalledWith({ outcome: 'empty' });
+    expect(
+      view.getByText('音声を聞き取れませんでした。もう一度お試しください。'),
+    ).toBeOnTheScreen();
+    expect(Haptics.selectionAsync).toHaveBeenCalledTimes(1);
+    expect(Haptics.notificationAsync).not.toHaveBeenCalled();
+
+    jest.clearAllMocks();
+
+    await act(async () => {
+      mockVoiceListener?.({
+        type: 'error',
+        error: 'model-unavailable',
+        message: 'offline model missing',
+      });
+    });
+
+    expect(mockCaptureVoiceInputResult).toHaveBeenLastCalledWith({ outcome: 'unavailable' });
+    expect(Haptics.notificationAsync).toHaveBeenCalledTimes(1);
+
+    jest.clearAllMocks();
+
+    await act(async () => {
+      mockVoiceListener?.({ type: 'error', error: 'unknown', message: 'recognizer failed' });
+    });
+
+    expect(mockCaptureVoiceInputResult).toHaveBeenLastCalledWith({ outcome: 'error' });
+    expect(Haptics.notificationAsync).toHaveBeenCalledTimes(1);
   });
 });

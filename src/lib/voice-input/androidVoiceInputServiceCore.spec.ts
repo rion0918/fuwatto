@@ -223,3 +223,135 @@ test('Android requests microphone permission from Moonshine when the OS provider
   assert.equal(primary.calls.requestPermission, 0);
   assert.equal(fallback.calls.requestPermission, 1);
 });
+
+test('Android keeps the OS provider enabled after recoverable no-speech, aborted, and not-allowed errors', async () => {
+  const primary = makeProvider({ status: 'ready', canAskAgain: true });
+  const fallback = makeProvider({ status: 'ready', canAskAgain: true });
+  const service = makeService(primary.provider, fallback.provider);
+
+  for (const error of ['no-speech', 'aborted', 'not-allowed'] as const) {
+    await service.start();
+    primary.emit({ type: 'error', error, message: `recoverable ${error}` });
+  }
+
+  await service.start();
+  assert.equal(primary.calls.start, 4);
+  assert.equal(fallback.calls.start, 0);
+});
+
+test('Android falls back to Moonshine immediately when primary start rejects', async () => {
+  const primary = makeProvider(
+    { status: 'ready', canAskAgain: true },
+    { startError: new Error('OS start failed') },
+  );
+  const fallback = makeProvider({ status: 'ready', canAskAgain: true });
+  const service = makeService(primary.provider, fallback.provider);
+  const events: VoiceInputEvent[] = [];
+  service.subscribe((event) => events.push(event));
+
+  await service.start();
+
+  assert.equal(primary.calls.start, 1);
+  assert.equal(fallback.calls.start, 1);
+  assert.deepEqual(events, [{ type: 'start' }]);
+
+  fallback.emit({ type: 'end' });
+  await service.start();
+  assert.equal(primary.calls.start, 1);
+  assert.equal(fallback.calls.start, 2);
+});
+
+test('Android falls back to Moonshine within the same session when primary errors before listening starts', async () => {
+  const listeners = new Set<(event: VoiceInputEvent) => void>();
+  const primaryCalls = { start: 0 };
+  const primaryProvider: AndroidVoiceInputProvider = {
+    async getAvailability() {
+      return { status: 'ready', canAskAgain: true };
+    },
+    async requestMicrophonePermission() {
+      return grantedPermission;
+    },
+    async start() {
+      primaryCalls.start += 1;
+    },
+    stop() {},
+    abort() {},
+    subscribe(listener) {
+      listeners.add(listener);
+      return { remove: () => listeners.delete(listener) };
+    },
+    releaseForBackground() {},
+  };
+  const fallback = makeProvider({ status: 'ready', canAskAgain: true });
+  const service = makeService(primaryProvider, fallback.provider);
+  const events: VoiceInputEvent[] = [];
+  service.subscribe((event) => events.push(event));
+
+  await service.start();
+  for (const listener of listeners) {
+    listener({ type: 'error', error: 'unknown', message: 'recognizer init failed' });
+  }
+  await new Promise((resolve) => setTimeout(resolve, 0));
+
+  assert.equal(primaryCalls.start, 1);
+  assert.equal(fallback.calls.start, 1);
+  assert.deepEqual(events, [{ type: 'start' }]);
+});
+
+test('Android aborts cleanly while immediate fallback is checking availability', async () => {
+  const listeners = new Set<(event: VoiceInputEvent) => void>();
+  let resolveFallbackAvailability!: (availability: VoiceInputAvailability) => void;
+  const fallbackStartCalls = { count: 0 };
+  const primaryProvider: AndroidVoiceInputProvider = {
+    async getAvailability() {
+      return { status: 'ready', canAskAgain: true };
+    },
+    async requestMicrophonePermission() {
+      return grantedPermission;
+    },
+    async start() {},
+    stop() {},
+    abort() {},
+    subscribe(listener) {
+      listeners.add(listener);
+      return { remove: () => listeners.delete(listener) };
+    },
+    releaseForBackground() {},
+  };
+  const fallbackProvider: AndroidVoiceInputProvider = {
+    async getAvailability() {
+      return new Promise<VoiceInputAvailability>((resolve) => {
+        resolveFallbackAvailability = resolve;
+      });
+    },
+    async requestMicrophonePermission() {
+      return grantedPermission;
+    },
+    async start() {
+      fallbackStartCalls.count += 1;
+    },
+    stop() {},
+    abort() {},
+    subscribe() {
+      return { remove() {} };
+    },
+    releaseForBackground() {},
+  };
+  const service = makeService(primaryProvider, fallbackProvider);
+  const events: VoiceInputEvent[] = [];
+  service.subscribe((event) => events.push(event));
+
+  await service.start();
+  for (const listener of listeners) {
+    listener({ type: 'error', error: 'model-unavailable', message: 'offline model missing' });
+  }
+  service.abort();
+  resolveFallbackAvailability({ status: 'ready', canAskAgain: true });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+
+  assert.equal(fallbackStartCalls.count, 0);
+  assert.deepEqual(events, [
+    { type: 'error', error: 'aborted', message: 'Voice input was cancelled' },
+    { type: 'end' },
+  ]);
+});

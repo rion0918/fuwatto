@@ -234,7 +234,7 @@ test('consent gates activity and forgets unfinished input tracking on withdrawal
   analytics.captureQuickAddOpened({ source: 'home_button' });
   analytics.captureVoiceInputStarted();
   analytics.captureAppActive({ source: 'resume' });
-  assert.deepEqual(fake.captured, []);
+  assert.equal(fake.captured.length, 0);
 
   await analytics.setCaptureEnabled(true);
   await analytics.setCaptureEnabled(true);
@@ -293,7 +293,7 @@ test('withdrawal during opt-in prevents measurement start and leaves the SDK opt
   finishOptIn();
   await Promise.all([enabling, disabling]);
 
-  assert.deepEqual(fake.captured, []);
+  assert.equal(fake.captured.length, 0);
   assert.equal(fake.client.optedOut, true);
   assert.equal(await analytics.getCaptureEnabled(), false);
 });
@@ -350,7 +350,7 @@ test('analytics fails closed when SDK opt-out fails', async () => {
 
   assert.equal(await analytics.setCaptureEnabled(false), false);
   analytics.captureQuickAddOpened({ source: 'home_button' });
-  assert.deepEqual(fake.captured, []);
+  assert.equal(fake.captured.length, 0);
 });
 
 test('lazy analytics does not create a client or capture before explicit consent', async () => {
@@ -367,7 +367,7 @@ test('lazy analytics does not create a client or capture before explicit consent
   analytics.captureScreen('/');
   analytics.captureQuickAddOpened({ source: 'home_button' });
   assert.equal(factoryCalls, 0);
-  assert.deepEqual(fake.captured, []);
+  assert.equal(fake.captured.length, 0);
   assert.deepEqual(fake.screens, []);
 
   assert.equal(await analytics.setCaptureEnabled(true), true);
@@ -417,4 +417,127 @@ test('PostHog client configuration disables sensitive and unused automatic captu
   assert.match(source, /deleteAsync/);
   assert.match(source, /before_send:/);
   assert.match(source, /isAllowedAnalyticsEvent/);
+});
+
+test('queues quick add opened and voice started while opt-in is in flight and flushes after opt-in', async (t) => {
+  let now = 2_000;
+  t.mock.method(Date, 'now', () => now);
+  const fake = makeClient();
+  fake.client.optedOut = true;
+  const readyResolvers: (() => void)[] = [];
+  const optInResolvers: (() => void)[] = [];
+  const flushMicrotasks = async () => {
+    for (let i = 0; i < 6; i += 1) await Promise.resolve();
+  };
+  fake.client.ready = () =>
+    new Promise<void>((resolve) => {
+      readyResolvers.push(resolve);
+    });
+  fake.client.optIn = () =>
+    new Promise<void>((resolve) => {
+      optInResolvers.push(() => {
+        fake.client.optedOut = false;
+        resolve();
+      });
+    });
+  const analytics = createAnalyticsService(fake.client, { configured: true });
+
+  const firstEnable = analytics.setCaptureEnabled(true);
+  analytics.captureQuickAddOpened({ source: 'widget_deep_link', inputMode: 'text' });
+  analytics.captureVoiceInputStarted();
+  const secondEnable = analytics.setCaptureEnabled(true);
+
+  assert.equal(fake.captured.length, 0);
+
+  await flushMicrotasks();
+  readyResolvers.shift()?.();
+  await flushMicrotasks();
+  optInResolvers.shift()?.();
+  await flushMicrotasks();
+  readyResolvers.shift()?.();
+  await flushMicrotasks();
+  optInResolvers.shift()?.();
+  const results = await Promise.all([firstEnable, secondEnable]);
+
+  assert.deepEqual(results, [false, true]);
+  assert.equal(fake.captured.length, 3);
+  assert.deepEqual(
+    fake.captured.map((entry) => entry.event),
+    ['app active', 'quick add opened', 'voice input started'],
+  );
+  const visitId = fake.captured[1].properties?.quick_add_id;
+  assert.equal(typeof visitId, 'string');
+  assert.equal(fake.captured[1].properties?.source, 'widget_deep_link');
+  assert.equal(fake.captured[1].properties?.input_mode, 'voice');
+  assert.equal(fake.captured[2].properties?.quick_add_id, visitId);
+
+  now = 7_000;
+  analytics.captureReminderCreated({
+    source: 'widget_deep_link',
+    datePreset: 'today',
+    notificationStatus: 'scheduled',
+  });
+  now = 9_000;
+  analytics.captureQuickAddClosed();
+
+  assert.deepEqual(fake.captured[3], {
+    event: 'reminder created',
+    properties: {
+      source: 'widget_deep_link',
+      quick_add_id: visitId,
+      input_mode: 'voice',
+      first_in_quick_add: true,
+      elapsed_seconds: 5,
+      date_preset: 'today',
+      notification_status: 'scheduled',
+    },
+  });
+  assert.deepEqual(fake.captured[4], {
+    event: 'quick add closed',
+    properties: {
+      quick_add_id: visitId,
+      source: 'widget_deep_link',
+      outcome: 'created',
+      created_count: 1,
+      elapsed_seconds: 7,
+    },
+  });
+});
+
+test('discards queued quick add visit when closed or opted out before opt-in completes', async () => {
+  const fake = makeClient();
+  fake.client.optedOut = true;
+  const optInResolvers: (() => void)[] = [];
+  const flushMicrotasks = async () => {
+    for (let i = 0; i < 6; i += 1) await Promise.resolve();
+  };
+  fake.client.optIn = () =>
+    new Promise<void>((resolve) => {
+      optInResolvers.push(() => {
+        fake.client.optedOut = false;
+        resolve();
+      });
+    });
+  const analytics = createAnalyticsService(fake.client, { configured: true });
+
+  const enableAfterClose = analytics.setCaptureEnabled(true);
+  analytics.captureQuickAddOpened({ source: 'widget_deep_link' });
+  analytics.captureVoiceInputStarted();
+  analytics.captureQuickAddClosed();
+  await flushMicrotasks();
+  optInResolvers.shift()?.();
+  assert.equal(await enableAfterClose, true);
+  assert.deepEqual(
+    fake.captured.map((entry) => entry.event),
+    ['app active'],
+  );
+
+  await analytics.setCaptureEnabled(false);
+  const enableThenOptOut = analytics.setCaptureEnabled(true);
+  analytics.captureQuickAddOpened({ source: 'widget_deep_link' });
+  const disable = analytics.setCaptureEnabled(false);
+  await flushMicrotasks();
+  optInResolvers.shift()?.();
+  await Promise.all([enableThenOptOut, disable]);
+  assert.equal(fake.captured.length, 1);
 });

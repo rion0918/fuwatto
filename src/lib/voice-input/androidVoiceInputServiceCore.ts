@@ -1,5 +1,6 @@
 import type {
   VoiceInputAvailability,
+  VoiceInputError,
   VoiceInputEvent,
   VoiceInputPermissionResponse,
   VoiceInputService,
@@ -24,6 +25,10 @@ function isPermissionState(availability: VoiceInputAvailability) {
   );
 }
 
+function isPrimaryProviderFailure(error: VoiceInputError) {
+  return error !== 'no-speech' && error !== 'aborted' && error !== 'not-allowed';
+}
+
 function isActiveState(state: SessionState) {
   return state !== 'idle';
 }
@@ -37,6 +42,9 @@ export function createAndroidHybridVoiceInputService(
   let activeProviderSubscription: { remove(): void } | null = null;
   let state: SessionState = 'idle';
   let primaryFailed = false;
+  let sessionSequence = 0;
+  let activeSessionId: number | null = null;
+  let pendingFallbackSessionId: number | null = null;
 
   function emit(event: VoiceInputEvent) {
     for (const listener of listeners) listener(event);
@@ -47,25 +55,77 @@ export function createAndroidHybridVoiceInputService(
     activeProviderSubscription = null;
   }
 
-  function forwardProviderEvent(event: VoiceInputEvent) {
+  function finishSession(sessionId: number) {
+    if (activeSessionId !== sessionId) return;
+    removeActiveProviderSubscription();
+    activeProvider = null;
+    activeSessionId = null;
+    if (pendingFallbackSessionId === sessionId) pendingFallbackSessionId = null;
+    state = 'idle';
+  }
+
+  async function startProvider(provider: AndroidVoiceInputProvider, sessionId: number) {
+    activeProvider = provider;
+    state = 'starting';
+    activeProviderSubscription = provider.subscribe((event) =>
+      forwardProviderEvent(event, sessionId),
+    );
+    await provider.start();
+    if (activeSessionId !== sessionId) {
+      provider.abort();
+    }
+  }
+
+  async function tryImmediateFallback(
+    sessionId: number,
+    originalError: Extract<VoiceInputEvent, { type: 'error' }>,
+  ) {
+    pendingFallbackSessionId = sessionId;
+    removeActiveProviderSubscription();
+    activeProvider = null;
+
+    try {
+      const fallbackAvailability = await fallback.getAvailability();
+      if (activeSessionId !== sessionId) return;
+
+      if (fallbackAvailability.status === 'ready') {
+        await startProvider(fallback, sessionId);
+        if (pendingFallbackSessionId === sessionId) pendingFallbackSessionId = null;
+        return;
+      }
+    } catch {
+      // Fall through and surface the original provider failure if fallback cannot start.
+    }
+
+    if (activeSessionId !== sessionId) return;
+    finishSession(sessionId);
+    emit(originalError);
+    emit({ type: 'end' });
+  }
+
+  function forwardProviderEvent(event: VoiceInputEvent, sessionId: number) {
+    if (activeSessionId !== sessionId) return;
+
     // Android uses the final result only. This also protects the UI if a native
     // recognizer emits an interim result despite interimResults being disabled.
     if (event.type === 'result' && !event.isFinal) return;
 
     if (event.type === 'start') state = 'listening';
     if (event.type === 'error') {
-      if (activeProvider === primary) primaryFailed = true;
-      removeActiveProviderSubscription();
-      activeProvider = null;
-      state = 'idle';
+      const isPrimaryRuntimeFailure =
+        activeProvider === primary && isPrimaryProviderFailure(event.error);
+      if (isPrimaryRuntimeFailure) primaryFailed = true;
+      if (isPrimaryRuntimeFailure && state === 'starting' && providerOverride?.() !== 'primary') {
+        void tryImmediateFallback(sessionId, event);
+        return;
+      }
+      finishSession(sessionId);
       emit(event);
       emit({ type: 'end' });
       return;
     }
     if (event.type === 'end') {
-      removeActiveProviderSubscription();
-      activeProvider = null;
-      state = 'idle';
+      finishSession(sessionId);
     }
 
     emit(event);
@@ -166,17 +226,32 @@ export function createAndroidHybridVoiceInputService(
         throw new Error(`Voice input is unavailable: ${resolved.availability.status}`);
       }
 
-      activeProvider = resolved.provider;
-      state = 'starting';
-      activeProviderSubscription = activeProvider.subscribe(forwardProviderEvent);
+      const sessionId = ++sessionSequence;
+      activeSessionId = sessionId;
 
       try {
-        await activeProvider.start();
+        await startProvider(resolved.provider, sessionId);
       } catch (error) {
-        if (activeProvider === primary) primaryFailed = true;
+        if (pendingFallbackSessionId === sessionId) return;
         removeActiveProviderSubscription();
         activeProvider = null;
-        state = 'idle';
+        if (resolved.provider === primary) {
+          primaryFailed = true;
+          if (providerOverride?.() !== 'primary' && activeSessionId === sessionId) {
+            try {
+              const fallbackAvailability = await fallback.getAvailability();
+              if (activeSessionId !== sessionId) return;
+              if (fallbackAvailability.status === 'ready') {
+                await startProvider(fallback, sessionId);
+                return;
+              }
+            } catch {
+              // Fall through and surface the primary start failure when fallback fails too.
+            }
+          }
+        }
+        if (activeSessionId !== sessionId) return;
+        finishSession(sessionId);
         throw error;
       }
     },
@@ -188,12 +263,18 @@ export function createAndroidHybridVoiceInputService(
     },
 
     abort() {
-      if (!activeProvider || state === 'idle') return;
+      if (state === 'idle') return;
       const provider = activeProvider;
-      removeActiveProviderSubscription();
-      activeProvider = null;
-      state = 'idle';
-      provider.abort();
+      const currentSessionId = activeSessionId;
+      if (currentSessionId !== null) {
+        finishSession(currentSessionId);
+      } else {
+        removeActiveProviderSubscription();
+        activeProvider = null;
+        pendingFallbackSessionId = null;
+        state = 'idle';
+      }
+      provider?.abort();
       emit({ type: 'error', error: 'aborted', message: 'Voice input was cancelled' });
       emit({ type: 'end' });
     },
@@ -204,7 +285,7 @@ export function createAndroidHybridVoiceInputService(
     },
 
     releaseForBackground() {
-      if (activeProvider) service.abort();
+      if (state !== 'idle') service.abort();
       primary.releaseForBackground();
       fallback.releaseForBackground();
     },

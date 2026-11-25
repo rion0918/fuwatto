@@ -24,7 +24,7 @@
 
 「ふわっと。」は、忘れる前に数秒で気軽に残せる、シンプルでやさしいリマインダー・メモアプリです。
 
-予定や持ち物、買い物メモ、あとで思い出したいことを入力すると、ホーム画面に泡（シャボン玉）として表示されます。日付や時刻を選んでおけば、前日と当日の2回に分けて通知でお知らせするので、大切な予定や日々の用事のうっかり忘れを防げます。
+予定や持ち物、買い物メモ、あとで思い出したいことを入力すると、ホーム画面に泡（シャボン玉）として表示されます。日付や時刻を選んでおけば、当日の通知に加えて前日通知（前日の通知時刻より前に登録した場合）でもお知らせするので、大切な予定や日々の用事のうっかり忘れを防げます。
 
 【こんなときにおすすめ】
 
@@ -63,7 +63,7 @@ App Store Connect 提出時は、アプリ名・サブタイトル・キーワ�
 - 英語（US）ロケール補完（日本のApp Storeでも検索対象になるため設定）:
   - App Name（24文字・上限30文字）: `Fuwatto - Voice Reminder`
   - Subtitle（25文字・上限30文字）: `Simple Bubble Memo & ToDo`
-  - Keywords（99文字・上限100文字）: `reminder,memo,voice,note,todo,task,list,alarm,timer,simple,cute,shopping,daily,schedule,bubble,free`
+  - Keywords（97文字・上限100文字）: `note,task,list,alarm,timer,cute,shopping,daily,schedule,free,checklist,errand,grocery,habit,alert`
 - iOS用の説明文調整ルール:
   - 上記「詳しい説明」をベースにしつつ、**Androidホーム画面Widgetに関する記載（「Androidホーム画面Widget」の行と「Widget」の言及）を削除**する。
   - 音声入力の行は「OS標準の日本語音声認識に対応しています」とする。

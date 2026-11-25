@@ -23,10 +23,25 @@ const mockRaiseToSpeakPrepare = jest.fn();
 const mockRefreshReminders = jest.fn(async () => ({ data: mockReminders, error: null }));
 const mockCreateReminder = jest.fn();
 const mockDeleteReminder = jest.fn();
+const mockGetNotificationPermissionStatus = jest.fn(async () => ({
+  status: 'granted',
+  label: '許可済み',
+  canAskAgain: false,
+}));
+const mockRequestNotificationPermissions = jest.fn(async () => ({
+  status: 'granted',
+  label: '許可済み',
+  canAskAgain: false,
+}));
 const mockRecordQuickAddCompleted = jest.fn(async () => false);
 const mockRecordBubbleCompleted = jest.fn(async () => false);
 const mockEnsureFirstSeen = jest.fn(async () => {});
 
+let mockNotificationIntroProps: {
+  visible: boolean;
+  onAllow: () => void;
+  onDismiss: () => void;
+} | null = null;
 let mockReminders: Reminder[] = [];
 let mockBoardReminders: Reminder[] = [];
 let mockBoardOnDeleteMotionComplete: ((id: string, phase: string) => void) | null = null;
@@ -132,12 +147,8 @@ jest.mock('../../../bootstrap/appServicesContext', () => ({
       captureProPaywallResult: jest.fn(),
     },
     notificationSettings: {
-      getNotificationPermissionStatus: jest.fn(async () => ({
-        status: 'granted',
-        label: '許可済み',
-        canAskAgain: false,
-      })),
-      requestNotificationPermissions: jest.fn(),
+      getNotificationPermissionStatus: () => mockGetNotificationPermissionStatus(),
+      requestNotificationPermissions: () => mockRequestNotificationPermissions(),
     },
     purchases: {
       getProAccessState: jest.fn(async () => 'free'),
@@ -296,7 +307,14 @@ jest.mock('../components/ReminderDetailSheet', () => ({
 }));
 
 jest.mock('../components/NotificationPermissionIntroModal', () => ({
-  NotificationPermissionIntroModal: () => null,
+  NotificationPermissionIntroModal: (props: {
+    visible: boolean;
+    onAllow: () => void;
+    onDismiss: () => void;
+  }) => {
+    mockNotificationIntroProps = props;
+    return null;
+  },
 }));
 
 const { HomeScreen } =
@@ -314,6 +332,7 @@ describe('HomeScreen first-run raise-to-speak onboarding', () => {
     mockAppStateListeners = new Set();
     mockBackListeners = new Set();
     mockAnalyticsConfigured = true;
+    mockNotificationIntroProps = null;
     mockReminders = [];
     mockBoardOnDeleteMotionComplete = null;
     mockInputSheetOnSave = null;
@@ -328,6 +347,16 @@ describe('HomeScreen first-run raise-to-speak onboarding', () => {
     mockTiltProgress = 0;
     mockOpenedDetailReminderId = null;
     mockRaiseToSpeakPrepare.mockResolvedValue({ status: 'ready' });
+    mockGetNotificationPermissionStatus.mockResolvedValue({
+      status: 'granted',
+      label: '許可済み',
+      canAskAgain: false,
+    });
+    mockRequestNotificationPermissions.mockResolvedValue({
+      status: 'granted',
+      label: '許可済み',
+      canAskAgain: false,
+    });
     mockCreateReminder.mockResolvedValue({ notification: { status: 'scheduled' } });
     mockDeleteReminder.mockResolvedValue(true);
     mockUseReminderUiStore.getState().closeQuickAdd();
@@ -806,5 +835,182 @@ describe('HomeScreen first-run raise-to-speak onboarding', () => {
       expect(mockDeleteReminder).toHaveBeenCalledWith('rem-active', { deferCache: true });
       expect(mockRecordBubbleCompleted).toHaveBeenCalledTimes(1);
     });
+  });
+
+  it('marks quick add store review ineligible when the notification permission intro was shown in the same session', async () => {
+    mockSettingsState = makeSettings({
+      raiseToSpeakOnboardingCompleted: true,
+      notificationPermissionIntroSeen: false,
+    });
+    mockReminders = [
+      {
+        id: 'existing-1',
+        title: '既存のリマインダー',
+        allDay: false,
+        targetAt: '2035-05-13T10:00:00.000Z',
+        previousNotifyAt: '2035-05-12T20:00:00.000Z',
+        targetNotifyAt: '2035-05-13T10:00:00.000Z',
+        expiresAt: '2035-05-13T10:00:00.000Z',
+        previousNotificationId: null,
+        targetNotificationId: null,
+        status: 'active',
+        createdAt: '',
+        updatedAt: '',
+      },
+    ];
+    mockGetNotificationPermissionStatus.mockResolvedValueOnce({
+      status: 'undetermined',
+      label: '未確認',
+      canAskAgain: true,
+    });
+    const view = await render(<HomeScreen />);
+
+    await fireEvent.press(view.getByLabelText('リマインダーを追加'));
+    await waitFor(() => expect(view.getByTestId('quick-add-open')).toBeOnTheScreen());
+
+    let savePromise: Promise<void> | undefined;
+    await act(async () => {
+      savePromise = mockInputSheetOnSave?.('牛乳を買う');
+    });
+
+    await waitFor(() => expect(mockNotificationIntroProps?.visible).toBe(true));
+
+    await act(async () => {
+      mockNotificationIntroProps?.onDismiss();
+      await savePromise;
+    });
+
+    await waitFor(() => expect(mockNotificationIntroProps?.visible).toBe(false));
+
+    await act(async () => {
+      mockUseReminderUiStore.getState().closeQuickAdd();
+    });
+
+    await waitFor(() => {
+      expect(mockRecordQuickAddCompleted).toHaveBeenCalledWith(1, { eligibleToPrompt: false });
+    });
+  });
+
+  it('records quick add completion once createReminder resolves after the sheet closes', async () => {
+    mockSettingsState = makeSettings({
+      raiseToSpeakOnboardingCompleted: true,
+      notificationPermissionIntroSeen: true,
+    });
+    mockReminders = [
+      {
+        id: 'existing-1',
+        title: '既存のリマインダー',
+        allDay: false,
+        targetAt: '2035-05-13T10:00:00.000Z',
+        previousNotifyAt: '2035-05-12T20:00:00.000Z',
+        targetNotifyAt: '2035-05-13T10:00:00.000Z',
+        expiresAt: '2035-05-13T10:00:00.000Z',
+        previousNotificationId: null,
+        targetNotificationId: null,
+        status: 'active',
+        createdAt: '',
+        updatedAt: '',
+      },
+    ];
+    let resolveCreate!: (value: { notification: { status: 'scheduled' } }) => void;
+    mockCreateReminder.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveCreate = resolve;
+        }),
+    );
+    const view = await render(<HomeScreen />);
+
+    await fireEvent.press(view.getByLabelText('リマインダーを追加'));
+    await waitFor(() => expect(view.getByTestId('quick-add-open')).toBeOnTheScreen());
+
+    let savePromise: Promise<void> | undefined;
+    await act(async () => {
+      savePromise = mockInputSheetOnSave?.('ごみ出し');
+    });
+
+    await act(async () => {
+      mockUseReminderUiStore.getState().closeQuickAdd();
+    });
+
+    expect(mockRecordQuickAddCompleted).not.toHaveBeenCalled();
+
+    await act(async () => {
+      resolveCreate({ notification: { status: 'scheduled' } });
+      await savePromise;
+    });
+
+    await waitFor(() => {
+      expect(mockRecordQuickAddCompleted).toHaveBeenCalledTimes(1);
+      expect(mockRecordQuickAddCompleted).toHaveBeenCalledWith(1, { eligibleToPrompt: true });
+    });
+  });
+
+  it('keeps pending save completions scoped to the closed visit when quick add reopens before save settles', async () => {
+    mockSettingsState = makeSettings({
+      raiseToSpeakOnboardingCompleted: true,
+      notificationPermissionIntroSeen: false,
+    });
+    mockReminders = [
+      {
+        id: 'existing-1',
+        title: '既存のリマインダー',
+        allDay: false,
+        targetAt: '2035-05-13T10:00:00.000Z',
+        previousNotifyAt: '2035-05-12T20:00:00.000Z',
+        targetNotifyAt: '2035-05-13T10:00:00.000Z',
+        expiresAt: '2035-05-13T10:00:00.000Z',
+        previousNotificationId: null,
+        targetNotificationId: null,
+        status: 'active',
+        createdAt: '',
+        updatedAt: '',
+      },
+    ];
+    let resolvePermission!: (value: {
+      status: string;
+      label: string;
+      canAskAgain: boolean;
+    }) => void;
+    mockGetNotificationPermissionStatus.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolvePermission = resolve;
+        }),
+    );
+    const view = await render(<HomeScreen />);
+
+    await fireEvent.press(view.getByLabelText('リマインダーを追加'));
+    await waitFor(() => expect(view.getByTestId('quick-add-open')).toBeOnTheScreen());
+
+    let savePromise: Promise<void> | undefined;
+    await act(async () => {
+      savePromise = mockInputSheetOnSave?.('買い物');
+    });
+
+    await act(async () => {
+      mockUseReminderUiStore.getState().closeQuickAdd();
+    });
+
+    await fireEvent.press(view.getByLabelText('リマインダーを追加'));
+    await waitFor(() => expect(view.getByTestId('quick-add-open')).toBeOnTheScreen());
+
+    expect(mockRecordQuickAddCompleted).not.toHaveBeenCalled();
+
+    await act(async () => {
+      resolvePermission({ status: 'granted', label: '許可済み', canAskAgain: false });
+      await savePromise;
+    });
+
+    await waitFor(() => {
+      expect(mockRecordQuickAddCompleted).toHaveBeenCalledTimes(1);
+      expect(mockRecordQuickAddCompleted).toHaveBeenCalledWith(1, { eligibleToPrompt: true });
+    });
+
+    await act(async () => {
+      mockUseReminderUiStore.getState().closeQuickAdd();
+    });
+
+    expect(mockRecordQuickAddCompleted).toHaveBeenCalledTimes(1);
   });
 });

@@ -78,6 +78,15 @@ type PendingReminderSaveInput = {
   allDay: boolean;
   useTestNotifications: boolean;
 };
+type QuickAddReviewSession = {
+  id: number;
+  createdCount: number;
+  pendingSaves: number;
+  hadAlert: boolean;
+  hadNotificationPermissionIntro: boolean;
+  closed: boolean;
+  recorded: boolean;
+};
 
 function makeDeleteMotionKey(reminderId: string, phase: BubbleDeleteMotionPhase) {
   return `${reminderId}:${phase}`;
@@ -151,8 +160,8 @@ export function HomeScreen() {
   const isSavingRef = useRef(false);
   const isQuickAddRequestPendingRef = useRef(false);
   const quickAddSourceRef = useRef<QuickAddSource>('home_button');
-  const quickAddCreatedCountRef = useRef(0);
-  const quickAddHadAlertRef = useRef(false);
+  const quickAddSessionSeqRef = useRef(0);
+  const activeQuickAddSessionRef = useRef<QuickAddReviewSession | null>(null);
   const raiseSessionActiveRef = useRef(false);
   const selectedReminderRef = useRef<Reminder | null>(null);
   const selectedReminderIdRef = useRef<string | null>(null);
@@ -246,8 +255,15 @@ export function HomeScreen() {
     (source: QuickAddSource, options?: QuickAddOptions) => {
       if (!isQuickAddOpenRef.current) {
         quickAddSourceRef.current = source;
-        quickAddCreatedCountRef.current = 0;
-        quickAddHadAlertRef.current = false;
+        activeQuickAddSessionRef.current = {
+          id: ++quickAddSessionSeqRef.current,
+          createdCount: 0,
+          pendingSaves: 0,
+          hadAlert: false,
+          hadNotificationPermissionIntro: false,
+          closed: false,
+          recorded: false,
+        };
         analytics.captureQuickAddOpened({ source, inputMode: options?.inputMode ?? 'text' });
       }
       isQuickAddOpenRef.current = true;
@@ -308,29 +324,36 @@ export function HomeScreen() {
     [activeReminderCount, openQuickAddForSource, purchases, showActiveLimitPaywall],
   );
 
+  const flushQuickAddReviewSession = useCallback(
+    (session: QuickAddReviewSession | null) => {
+      if (!session?.closed || session.recorded || session.pendingSaves > 0) return;
+
+      session.recorded = true;
+      if (session.createdCount <= 0) return;
+
+      void storeReview?.recordQuickAddCompleted(session.createdCount, {
+        eligibleToPrompt:
+          !session.hadAlert &&
+          !session.hadNotificationPermissionIntro &&
+          !isNotificationPermissionIntroVisible &&
+          !isRaiseToSpeakCalibrating,
+      });
+    },
+    [isNotificationPermissionIntroVisible, isRaiseToSpeakCalibrating, storeReview],
+  );
+
   useEffect(() => {
     if (!isQuickAddOpen && isQuickAddOpenRef.current) analytics.captureQuickAddClosed();
-    if (!isQuickAddOpen && isQuickAddOpenRef.current && quickAddCreatedCountRef.current > 0) {
-      const createdCount = quickAddCreatedCountRef.current;
-      const hadAlert = quickAddHadAlertRef.current;
-      quickAddCreatedCountRef.current = 0;
-      quickAddHadAlertRef.current = false;
-      void storeReview?.recordQuickAddCompleted(createdCount, {
-        eligibleToPrompt:
-          !hadAlert && !isNotificationPermissionIntroVisible && !isRaiseToSpeakCalibrating,
-      });
-    } else if (!isQuickAddOpen) {
-      quickAddCreatedCountRef.current = 0;
-      quickAddHadAlertRef.current = false;
+    if (!isQuickAddOpen && isQuickAddOpenRef.current) {
+      const closedSession = activeQuickAddSessionRef.current;
+      activeQuickAddSessionRef.current = null;
+      if (closedSession) {
+        closedSession.closed = true;
+        flushQuickAddReviewSession(closedSession);
+      }
     }
     isQuickAddOpenRef.current = isQuickAddOpen;
-  }, [
-    analytics,
-    isNotificationPermissionIntroVisible,
-    isQuickAddOpen,
-    isRaiseToSpeakCalibrating,
-    storeReview,
-  ]);
+  }, [analytics, flushQuickAddReviewSession, isQuickAddOpen]);
 
   useEffect(() => {
     selectedReminderRef.current = selectedReminder;
@@ -533,6 +556,7 @@ export function HomeScreen() {
       permissionMode?: NotificationPermissionMode;
       suppressPermissionDeniedAlert?: boolean;
     } = {},
+    session: QuickAddReviewSession | null = null,
   ) => {
     if (isSavingRef.current) {
       throw new Error('Reminder save is already in progress');
@@ -555,7 +579,7 @@ export function HomeScreen() {
         },
       );
       didCreateReminder = true;
-      quickAddCreatedCountRef.current += 1;
+      if (session) session.createdCount += 1;
       analytics.captureReminderCreated({
         source: quickAddSourceRef.current,
         datePreset,
@@ -578,13 +602,13 @@ export function HomeScreen() {
           'scheduling-failed': '端末で通知を予約できませんでした。',
         }[result.notification.reason];
 
-        quickAddHadAlertRef.current = true;
+        if (session) session.hadAlert = true;
         Alert.alert('リマインダーは保存しましたが、通知を予約できませんでした', failureMessage, [
           { text: 'あとで', style: 'cancel' },
           { text: '設定を確認', onPress: () => router.push('/settings') },
         ]);
       } else if (result.notification.status === 'partial') {
-        quickAddHadAlertRef.current = true;
+        if (session) session.hadAlert = true;
         Alert.alert(
           '前日通知を予約できませんでした',
           '当日の通知は予約されています。端末の通知設定を確認してください。',
@@ -606,6 +630,7 @@ export function HomeScreen() {
               : 'save_failed',
         });
       }
+      if (session) session.hadAlert = true;
       console.warn('Failed to save reminder', saveError);
       if (saveError instanceof Error && saveError.name === 'ActiveReminderLimitReachedError') {
         Alert.alert(
@@ -630,38 +655,52 @@ export function HomeScreen() {
 
   const handleSave = async (title: string) => {
     analytics.captureQuickAddSubmitted({ datePreset, allDay });
-    const input: PendingReminderSaveInput = {
-      title,
-      dateOffset,
-      customTargetDate,
-      targetTime,
-      allDay,
-      useTestNotifications: __DEV__ && isNotificationTestModeEnabled,
-    };
-
-    if (settings?.notificationPermissionIntroSeen) {
-      return saveReminder(input, { permissionMode: 'check-only' });
-    }
-
+    const session = activeQuickAddSessionRef.current;
+    if (session) session.pendingSaves += 1;
     try {
-      const permission = await notificationSettings.getNotificationPermissionStatus();
-      if (permission.status === 'granted') {
-        return saveReminder(input, { permissionMode: 'check-only' });
+      const input: PendingReminderSaveInput = {
+        title,
+        dateOffset,
+        customTargetDate,
+        targetTime,
+        allDay,
+        useTestNotifications: __DEV__ && isNotificationTestModeEnabled,
+      };
+
+      if (settings?.notificationPermissionIntroSeen) {
+        return await saveReminder(input, { permissionMode: 'check-only' }, session);
       }
 
-      setNotificationPermissionCanAskAgain(permission.canAskAgain);
-      const permissionMode = await new Promise<NotificationPermissionMode>((resolve) => {
-        pendingReminderSaveRef.current = { input, resolve };
-        setIsNotificationPermissionIntroVisible(true);
-      });
+      try {
+        const permission = await notificationSettings.getNotificationPermissionStatus();
+        if (permission.status === 'granted') {
+          return await saveReminder(input, { permissionMode: 'check-only' }, session);
+        }
 
-      return saveReminder(input, {
-        permissionMode,
-        suppressPermissionDeniedAlert: true,
-      });
-    } catch (error) {
-      console.warn('Failed to prepare notification permission prompt', error);
-      return saveReminder(input, { permissionMode: 'check-only' });
+        if (session) session.hadNotificationPermissionIntro = true;
+        setNotificationPermissionCanAskAgain(permission.canAskAgain);
+        const permissionMode = await new Promise<NotificationPermissionMode>((resolve) => {
+          pendingReminderSaveRef.current = { input, resolve };
+          setIsNotificationPermissionIntroVisible(true);
+        });
+
+        return await saveReminder(
+          input,
+          {
+            permissionMode,
+            suppressPermissionDeniedAlert: true,
+          },
+          session,
+        );
+      } catch (error) {
+        console.warn('Failed to prepare notification permission prompt', error);
+        return await saveReminder(input, { permissionMode: 'check-only' }, session);
+      }
+    } finally {
+      if (session) {
+        session.pendingSaves -= 1;
+        flushQuickAddReviewSession(session);
+      }
     }
   };
 

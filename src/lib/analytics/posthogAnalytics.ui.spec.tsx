@@ -71,6 +71,24 @@ it('preserves the SDK geoip opt-out while removing personal event properties', a
         created_count: 1,
       },
     });
+    expect(
+      mockBeforeSend({
+        event: 'store review requested',
+        properties: {
+          distinct_id: 'anonymous-id',
+          trigger: 'quick_add_closed',
+          prompt_count: 1,
+          title: 'private reminder',
+        },
+      }),
+    ).toEqual({
+      event: 'store review requested',
+      properties: {
+        distinct_id: 'anonymous-id',
+        trigger: 'quick_add_closed',
+        prompt_count: 1,
+      },
+    });
     expect(mockBeforeSend({ event: '$autocapture', properties: {} })).toBeNull();
   } finally {
     if (previousKey === undefined) delete process.env.EXPO_PUBLIC_POSTHOG_API_KEY;

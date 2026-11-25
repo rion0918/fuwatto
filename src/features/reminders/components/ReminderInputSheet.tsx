@@ -103,6 +103,17 @@ function voiceErrorMessage(error: string) {
   return '音声入力を完了できませんでした。手入力をお試しください。';
 }
 
+function voiceErrorOutcome(
+  error: string,
+  wasExplicitAbort: boolean,
+): 'cancelled' | 'empty' | 'permission-denied' | 'unavailable' | 'error' {
+  if (wasExplicitAbort) return 'cancelled';
+  if (error === 'no-speech' || error === 'speech-timeout') return 'empty';
+  if (error === 'not-allowed') return 'permission-denied';
+  if (error === 'model-unavailable') return 'unavailable';
+  return 'error';
+}
+
 export function ReminderInputSheet({
   defaultTargetTime = '08:00',
   allDayNotifyTime = '09:00',
@@ -486,14 +497,19 @@ export function ReminderInputSheet({
       if (event.type === 'error') {
         clearVoiceStopFallback();
         const wasExplicitAbort = explicitVoiceAbortRef.current && event.error === 'aborted';
-        analytics.captureVoiceInputResult({ outcome: wasExplicitAbort ? 'cancelled' : 'error' });
+        const outcome = voiceErrorOutcome(event.error, wasExplicitAbort);
+        analytics.captureVoiceInputResult({ outcome });
         explicitVoiceAbortRef.current = false;
         setVoiceVolume(0);
         setVoiceStatusValue('idle');
         completeVoiceInput();
         if (!wasExplicitAbort) {
           setTitleNotice(voiceErrorMessage(event.error));
-          void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
+          if (outcome === 'empty') {
+            void Haptics.selectionAsync().catch(() => {});
+          } else {
+            void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
+          }
         }
         return;
       }

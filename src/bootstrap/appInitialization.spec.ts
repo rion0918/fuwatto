@@ -12,6 +12,8 @@ test('bootstrap owns native setup and persisted data preparation', () => {
     /configureAndroidNotificationChannels\(\)\.catch/,
     /appServices\.purchases\.configure\(\)/,
     /await initializeDatabase\(\);/,
+    /const settings = await appServices\.settings\.get\(\);/,
+    /appServices\.analytics\.setCaptureEnabled\(true\)/,
     /await appServices\.reminders\.migrateLegacyNotificationChannels\(\);/,
     /await appServices\.reminders\.cleanup\(\);/,
     /await appServices\.reminders\.retryPendingNotifications\(\);/,
