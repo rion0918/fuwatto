@@ -1,5 +1,5 @@
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
-import { AppState, BackHandler, Linking, Platform, type AppStateStatus } from 'react-native';
+import { Alert, AppState, BackHandler, Linking, Platform, type AppStateStatus } from 'react-native';
 
 import type { Reminder, ReminderDepartureNotice } from '../domain/reminder';
 import { useReminderUiStore as mockUseReminderUiStore } from '../stores/reminderUiStore';
@@ -21,9 +21,17 @@ const mockSetCaptureEnabled = jest.fn(async () => true);
 const mockCaptureScreen = jest.fn();
 const mockRaiseToSpeakPrepare = jest.fn();
 const mockRefreshReminders = jest.fn(async () => ({ data: mockReminders, error: null }));
+const mockCreateReminder = jest.fn();
+const mockDeleteReminder = jest.fn();
+const mockRecordQuickAddCompleted = jest.fn(async () => false);
+const mockRecordBubbleCompleted = jest.fn(async () => false);
+const mockEnsureFirstSeen = jest.fn(async () => {});
 
 let mockReminders: Reminder[] = [];
 let mockBoardReminders: Reminder[] = [];
+let mockBoardOnDeleteMotionComplete: ((id: string, phase: string) => void) | null = null;
+let mockInputSheetOnSave: ((title: string) => Promise<void>) | null = null;
+let mockDetailSheetOnDelete: ((reminder: Reminder) => Promise<void>) | null = null;
 let mockDepartureNotices: ReminderDepartureNotice[] = [];
 let mockDepartureSheetVisible = false;
 let mockSettingsState: AppSettings | undefined;
@@ -138,6 +146,11 @@ jest.mock('../../../bootstrap/appServicesContext', () => ({
     raiseToSpeak: {
       prepare: (...args: unknown[]) => mockRaiseToSpeakPrepare(...args),
     },
+    storeReview: {
+      ensureFirstSeen: mockEnsureFirstSeen,
+      recordQuickAddCompleted: mockRecordQuickAddCompleted,
+      recordBubbleCompleted: mockRecordBubbleCompleted,
+    },
   }),
 }));
 
@@ -197,8 +210,8 @@ jest.mock('../presentation/useRemindersQuery', () => ({
     refresh: mockRefreshReminders,
     removeReminder: jest.fn(),
     removeReminders: jest.fn(),
-    createReminder: jest.fn(),
-    deleteReminder: jest.fn(),
+    createReminder: mockCreateReminder,
+    deleteReminder: mockDeleteReminder,
     deleteReminders: jest.fn(),
     updateReminderTitle: jest.fn(),
     updateReminderSchedule: jest.fn(),
@@ -235,8 +248,15 @@ jest.mock('../../../shared/components/AppScreen', () => {
 });
 
 jest.mock('../components/ReminderBubbleBoard', () => ({
-  ReminderBubbleBoard: ({ reminders }: { reminders: Reminder[] }) => {
+  ReminderBubbleBoard: ({
+    reminders,
+    onDeleteMotionComplete,
+  }: {
+    reminders: Reminder[];
+    onDeleteMotionComplete?: (id: string, phase: string) => void;
+  }) => {
     mockBoardReminders = reminders;
+    mockBoardOnDeleteMotionComplete = onDeleteMotionComplete ?? null;
     return null;
   },
 }));
@@ -249,9 +269,10 @@ jest.mock('../components/ReminderDepartureSheet', () => ({
 }));
 
 jest.mock('../components/ReminderInputSheet', () => ({
-  ReminderInputSheet: () => {
+  ReminderInputSheet: ({ onSave }: { onSave?: (title: string) => Promise<void> }) => {
     const React = jest.requireActual<typeof import('react')>('react');
     const { Text } = jest.requireActual<typeof import('react-native')>('react-native');
+    mockInputSheetOnSave = onSave ?? null;
     const isOpen = mockUseReminderUiStore((state) => state.isQuickAddOpen);
     const inputMode = mockUseReminderUiStore((state) => state.quickAddInputMode);
     return isOpen ? React.createElement(Text, { testID: 'quick-add-open' }, inputMode) : null;
@@ -259,10 +280,17 @@ jest.mock('../components/ReminderInputSheet', () => ({
 }));
 
 jest.mock('../components/ReminderDetailSheet', () => ({
-  ReminderDetailSheet: ({ reminder }: { reminder: Reminder | null }) => {
+  ReminderDetailSheet: ({
+    reminder,
+    onDelete,
+  }: {
+    reminder: Reminder | null;
+    onDelete?: (reminder: Reminder) => Promise<void>;
+  }) => {
     const React = jest.requireActual<typeof import('react')>('react');
     const { Text } = jest.requireActual<typeof import('react-native')>('react-native');
     mockOpenedDetailReminderId = reminder?.id ?? null;
+    mockDetailSheetOnDelete = onDelete ?? null;
     return reminder ? React.createElement(Text, { testID: 'detail-open' }, reminder.id) : null;
   },
 }));
@@ -287,6 +315,9 @@ describe('HomeScreen first-run raise-to-speak onboarding', () => {
     mockBackListeners = new Set();
     mockAnalyticsConfigured = true;
     mockReminders = [];
+    mockBoardOnDeleteMotionComplete = null;
+    mockInputSheetOnSave = null;
+    mockDetailSheetOnDelete = null;
     mockDepartureNotices = [];
     mockDepartureSheetVisible = false;
     mockSettingsState = makeSettings();
@@ -297,6 +328,8 @@ describe('HomeScreen first-run raise-to-speak onboarding', () => {
     mockTiltProgress = 0;
     mockOpenedDetailReminderId = null;
     mockRaiseToSpeakPrepare.mockResolvedValue({ status: 'ready' });
+    mockCreateReminder.mockResolvedValue({ notification: { status: 'scheduled' } });
+    mockDeleteReminder.mockResolvedValue(true);
     mockUseReminderUiStore.getState().closeQuickAdd();
 
     Object.defineProperty(Platform, 'OS', { configurable: true, value: 'android' });
@@ -642,6 +675,136 @@ describe('HomeScreen first-run raise-to-speak onboarding', () => {
     await waitFor(() => {
       expect(mockRefreshReminders).toHaveBeenCalledTimes(2);
       expect(view.getByTestId('detail-open')).toHaveTextContent('rem-1');
+    });
+  });
+
+  it('records clean quick add completions for store review when the sheet closes', async () => {
+    mockSettingsState = makeSettings({
+      raiseToSpeakOnboardingCompleted: true,
+      notificationPermissionIntroSeen: true,
+    });
+    mockReminders = [
+      {
+        id: 'existing-1',
+        title: '既存のリマインダー',
+        allDay: false,
+        targetAt: '2035-05-13T10:00:00.000Z',
+        previousNotifyAt: '2035-05-12T20:00:00.000Z',
+        targetNotifyAt: '2035-05-13T10:00:00.000Z',
+        expiresAt: '2035-05-13T10:00:00.000Z',
+        previousNotificationId: null,
+        targetNotificationId: null,
+        status: 'active',
+        createdAt: '',
+        updatedAt: '',
+      },
+    ];
+    const view = await render(<HomeScreen />);
+
+    await fireEvent.press(view.getByLabelText('リマインダーを追加'));
+    await waitFor(() => expect(view.getByTestId('quick-add-open')).toBeOnTheScreen());
+
+    await act(async () => {
+      await mockInputSheetOnSave?.('牛乳を買う');
+    });
+    await act(async () => {
+      mockUseReminderUiStore.getState().closeQuickAdd();
+    });
+
+    await waitFor(() => {
+      expect(mockRecordQuickAddCompleted).toHaveBeenCalledWith(1, { eligibleToPrompt: true });
+    });
+  });
+
+  it('marks quick add store review ineligible when saving triggered a notification alert', async () => {
+    jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    mockSettingsState = makeSettings({
+      raiseToSpeakOnboardingCompleted: true,
+      notificationPermissionIntroSeen: true,
+    });
+    mockReminders = [
+      {
+        id: 'existing-1',
+        title: '既存のリマインダー',
+        allDay: false,
+        targetAt: '2035-05-13T10:00:00.000Z',
+        previousNotifyAt: '2035-05-12T20:00:00.000Z',
+        targetNotifyAt: '2035-05-13T10:00:00.000Z',
+        expiresAt: '2035-05-13T10:00:00.000Z',
+        previousNotificationId: null,
+        targetNotificationId: null,
+        status: 'active',
+        createdAt: '',
+        updatedAt: '',
+      },
+    ];
+    mockCreateReminder.mockResolvedValueOnce({
+      notification: { status: 'not-scheduled', reason: 'notification-permission-denied' },
+    });
+    const view = await render(<HomeScreen />);
+
+    await fireEvent.press(view.getByLabelText('リマインダーを追加'));
+    await waitFor(() => expect(view.getByTestId('quick-add-open')).toBeOnTheScreen());
+
+    await act(async () => {
+      await mockInputSheetOnSave?.('ごみ出し');
+    });
+    await act(async () => {
+      mockUseReminderUiStore.getState().closeQuickAdd();
+    });
+
+    await waitFor(() => {
+      expect(mockRecordQuickAddCompleted).toHaveBeenCalledWith(1, { eligibleToPrompt: false });
+    });
+  });
+
+  it('records active bubble deletion for store review and ignores expired reminder deletion', async () => {
+    mockSettingsState = makeSettings({
+      raiseToSpeakOnboardingCompleted: true,
+      notificationPermissionIntroSeen: true,
+    });
+    const activeReminder: Reminder = {
+      id: 'rem-active',
+      title: '買い物',
+      allDay: false,
+      targetAt: '2035-05-13T10:00:00.000Z',
+      previousNotifyAt: '2035-05-12T20:00:00.000Z',
+      targetNotifyAt: '2035-05-13T10:00:00.000Z',
+      expiresAt: '2035-05-13T10:00:00.000Z',
+      previousNotificationId: null,
+      targetNotificationId: null,
+      status: 'active',
+      createdAt: '',
+      updatedAt: '',
+    };
+    const expiredReminder: Reminder = {
+      ...activeReminder,
+      id: 'rem-past',
+      status: 'expired',
+      targetAt: '2000-01-01T10:00:00.000Z',
+      expiresAt: '2000-01-01T10:00:00.000Z',
+    };
+    mockReminders = [activeReminder, expiredReminder];
+    await render(<HomeScreen />);
+
+    await act(async () => {
+      await mockDetailSheetOnDelete?.(expiredReminder);
+    });
+    expect(mockDeleteReminder).toHaveBeenCalledWith('rem-past');
+    expect(mockRecordBubbleCompleted).not.toHaveBeenCalled();
+
+    let deletePromise: Promise<void> | undefined;
+    await act(async () => {
+      deletePromise = mockDetailSheetOnDelete?.(activeReminder);
+    });
+    await act(async () => {
+      mockBoardOnDeleteMotionComplete?.('rem-active', 'bursting');
+      await deletePromise;
+    });
+
+    await waitFor(() => {
+      expect(mockDeleteReminder).toHaveBeenCalledWith('rem-active', { deferCache: true });
+      expect(mockRecordBubbleCompleted).toHaveBeenCalledTimes(1);
     });
   });
 });

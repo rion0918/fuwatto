@@ -164,7 +164,7 @@ jarsigner -verify dist/pop-reminder.aab
 keytool -printcert -jarfile dist/pop-reminder.aab
 ```
 
-- `verify:android:aab` は同梱 Moonshine モデル 2 ファイル、`tokens.txt`、`LICENSE`、`NOTICE` が元データと一致することを検査する。失敗した AAB は配布しない。
+- `verify:android:aab` は同梱 Moonshine モデル 2 ファイル、`tokens.txt`、`LICENSE`、`NOTICE` が元データと一致することに加えて、R8 の難読化マッピング（`BUNDLE-METADATA/com.android.tools.build.obfuscation/proguard.map`）が非空で含まれること、および `base/dex/*.dex` の合計サイズを検査する。失敗した AAB は配布しない。
 - `jarsigner` が成功し、`keytool` の署名証明書 SHA-256 が Play Console の **Upload key certificate** と一致することを確認する。自己署名やタイムスタンプに関する警告は、終了コードと証明書の結果を見て判断する。
 - `versionCode` は Play Console に既にアップロードした最大値より大きく、package は `com.rion0918.popreminder`、version は今回のリリース予定値と一致することを確認する。AAB アップロード後は App Bundle 詳細でも確認する。
 - target SDK と権限を App Bundle 詳細で確認する。不要な `READ_EXTERNAL_STORAGE`、`WRITE_EXTERNAL_STORAGE`、`SYSTEM_ALERT_WINDOW`、`ACTIVITY_RECOGNITION` が含まれないこと、Widget、通知、マイクが必要な範囲で動くことを確認する。
@@ -185,7 +185,7 @@ Play Console の対象アプリ `ふわっと。` を開きます。内部テス
 | カテゴリと連絡先 | アプリ / Productivity。問い合わせを受けられるサポートメールを Play Console、アプリ内、Privacy Policy で一致させる。                                          |
 | ストア掲載情報   | [掲載情報ドラフト](STORE_LISTING_DRAFT.md)から転記。アプリ名 `ふわっと。`、短い説明 `忘れる前に、数秒だけ。`。Android Widget を iOS 共通機能として書かない。 |
 | 素材             | アイコン 512 × 512、Feature Graphic 1024 × 500、個人情報に架空データを使った日本語の実画面スクリーンショットを準備する。                                     |
-| Privacy Policy   | `https://rion0918.github.io/pop-reminder/privacy/` が HTTPS で開き、アプリと SDK の実態に一致する。                                                          |
+| Privacy Policy   | `https://rion0918.github.io/fuwatto/privacy/` が HTTPS で開き、アプリと SDK の実態に一致する。                                                               |
 
 これらは Play Console が内部テスト開始時に求める項目と、後の公開準備項目を含みます。画面の必須項目を完了し、下書きだけで止まっていないことを確認します。
 

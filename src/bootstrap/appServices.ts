@@ -15,6 +15,9 @@ import { updateWidget, runWidgetUpdate } from '../widget/widgetUpdateService';
 import { revenueCatPurchaseService } from '../features/purchases/infrastructure/revenueCatPurchaseService';
 import { prepareRaiseToSpeak } from '../lib/voice-input/prepareRaiseToSpeak';
 import { voiceInputService } from '../lib/voice-input/voiceInputService';
+import { createStoreReviewService } from '../features/store-review/application/storeReviewService';
+import { sqliteStoreReviewStateRepository } from '../features/store-review/infrastructure/sqliteStoreReviewStateRepository';
+import { expoStoreReviewGateway } from '../lib/store-review/expoStoreReviewGateway';
 
 const widgetGateway = {
   async sync() {
@@ -56,6 +59,11 @@ export const appServices = {
   raiseToSpeak: {
     prepare: prepareRaiseToSpeak,
   },
+  storeReview: createStoreReviewService({
+    repository: sqliteStoreReviewStateRepository,
+    gateway: expoStoreReviewGateway,
+    analytics: posthogAnalytics,
+  }),
   reminders: reminderUseCases,
   settings: createSettingsUseCases({
     settings: sqliteSettingsRepository,

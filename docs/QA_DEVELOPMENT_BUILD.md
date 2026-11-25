@@ -683,6 +683,17 @@ Development Build に検証用の `EXPO_PUBLIC_POSTHOG_API_KEY` と US Cloud hos
 - 購入・復元・キャンセル・エラー・権利取消のいずれでもリマインダーデータを失わない
 - RevenueCat Customer画面の匿名ユーザー、`fuwatto_pro_lifetime`、`pro` entitlementが一致する
 
+### 15.3 アプリ内ストアレビュー（Store Review）
+
+`expo-store-review` によるアプリ内レビューはネイティブストアAPIのため、Expo Go ではなく Development Build またはストアの内部テスト／TestFlight ビルドで確認する。Android では Google Play からインストールされたビルドでのみレビューダイアログが表示される場合がある。
+
+- [ ] 初回起動（`first_seen_at` から48時間未満）または成功操作3回未満ではレビュー要求が発生しない
+- [ ] リマインダー作成時に通知許可・通知予約の警告アラートが出た場合や、権限イントロ／傾けて声メモ較正の直後はレビュー要求を行わない
+- [ ] 期限切れ（`過ぎた予定`）リマインダーの削除ではレビュー要求を行わない
+- [ ] 条件（成功3回以上・初回起動から48時間以上・前回から90日以上・要求回数3回未満）を満たした状態で、警告なしに Quick Add を完了して閉じたとき、またはアクティブな泡を削除して破裂モーションが終わったときに、`storeReview.isAvailable()` が true の環境でレビュー API が呼ばれる
+- [ ] OS 側でレビューダイアログが抑制・エラーになった場合も、リマインダーの保存・削除操作やホーム表示が失敗しない
+- [ ] 計測同意済みの場合、要求時にタイトルや日時を含まない `store review requested`（`trigger`, `prompt_count`）だけが送信される
+
 ### Android Widget（Development Build）
 
 Android Widget は Expo Go では確認せず、Widget 対応済みの Development Build をホーム画面へ追加して確認する。先頭の予定を大きな「次のリマインド」、残りをキューとして表示し、下端に横幅いっぱいの「追加する」を固定する。アプリで選択中のsky・lavender・mintテーマを不透明な読み取り面・細いガラスの縁・追加ボタンへ反映する。装飾泡は小さな静止画像とし、壁紙のリアルタイムぼかしは行わない。時間帯別の背景画像やランダム配置は使用しない。AndroidのRemoteViewsは任意の連続アニメーションを実行できず、`updatePeriodMillis` の下限も30分のため、アプリ終了中の期限切れ除外はbest-effortとして扱う。
@@ -852,6 +863,19 @@ iOSはWidgetKitのTimelineで予測可能な時刻の表示切り替えと、デ
 
 - Android 先行で入れた通知・設定導線が iOS リリース時にもそのまま使える
 - iPad最適化、App Store 審査向けの追加申告、文言修正が必要な場合だけ別タスク化する
+
+---
+
+### 19. R8 有効化後のリリース相当ビルド確認
+
+`android.enableMinifyInReleaseBuilds=true` および `proguard-android-optimize.txt` を有効化した Release 相当の Android ビルド（Play 内部テストトラック、または `bundletool` 等で Release AAB から生成した APK）で以下を確認する。
+
+- [ ] ホーム画面の Skia シャボン玉（膜アニメーション・テーマ色・文字描画）が崩れず描画される
+- [ ] Android ホーム画面 Widget の追加・再描画・タップ起動・`action=add` / `action=view` ディープリンクが動作する
+- [ ] 音声入力（OS 標準音声認識および `moonshine-tiny-ja` 端末内認識）が動作する
+- [ ] リマインダーの作成・編集・削除・通知スケジュールと発火が動作する
+- [ ] RevenueCat Paywall 表示と購入復元、PostHog 同意後のイベント送信がクラッシュせず動作する
+- [ ] アプリ内ストアレビュー依頼（条件到達時）がリマインダー操作を阻害せず動作する
 
 **備考欄**
 

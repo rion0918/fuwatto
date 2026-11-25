@@ -342,6 +342,28 @@ test('Android release builds generate and package the compressed Moonshine model
   }
 });
 
+test('Android release builds enable R8 optimization and keep widget entry points', () => {
+  const gradleProperties = readFileSync(join(__dirname, 'android/gradle.properties'), 'utf8');
+  const proguardRules = readFileSync(join(__dirname, 'android/app/proguard-rules.pro'), 'utf8');
+  const verifyAabScript = readFileSync(join(__dirname, 'scripts/verify-android-aab.mjs'), 'utf8');
+
+  assert.match(gradleProperties, /^android\.enableMinifyInReleaseBuilds=true$/m);
+  assert.match(gradleProperties, /^android\.enableShrinkResourcesInReleaseBuilds=false$/m);
+  assert.match(androidBuildGradle, /getDefaultProguardFile\("proguard-android-optimize\.txt"\)/);
+  assert.doesNotMatch(androidBuildGradle, /getDefaultProguardFile\("proguard-android\.txt"\)/);
+
+  assert.match(proguardRules, /com\.rion0918\.popreminder\.widget\.PopReminderWidget/);
+  assert.match(proguardRules, /com\.reactnativeandroidwidget\.RNWidgetBackgroundTaskWorker/);
+  assert.match(proguardRules, /com\.reactnativeandroidwidget\.oss\.HeadlessJsTaskWorker/);
+  assert.doesNotMatch(proguardRules, /-dontobfuscate|-dontoptimize/);
+
+  assert.match(
+    verifyAabScript,
+    /BUNDLE-METADATA\/com\.android\.tools\.build\.obfuscation\/proguard\.map/,
+  );
+  assert.match(verifyAabScript, /base\/dex/);
+});
+
 test('Android notifications have a release-ready small icon and accent color', () => {
   const notificationsPlugin = appConfig.expo.plugins.find((plugin) => {
     return Array.isArray(plugin) && plugin[0] === 'expo-notifications';

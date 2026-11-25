@@ -63,7 +63,17 @@ export const appSettings = sqliteTable('app_settings', {
     .default('lavender'),
 });
 
+export const storeReviewState = sqliteTable('store_review_state', {
+  id: text('id').primaryKey(),
+  firstSeenAt: text('first_seen_at'),
+  successCount: integer('success_count').notNull().default(0),
+  promptCount: integer('prompt_count').notNull().default(0),
+  lastPromptAt: text('last_prompt_at'),
+});
+
 export type ReminderRow = typeof reminders.$inferSelect;
 export type NewReminderRow = typeof reminders.$inferInsert;
 export type AppSettingsRow = typeof appSettings.$inferSelect;
 export type NewAppSettingsRow = typeof appSettings.$inferInsert;
+export type StoreReviewStateRow = typeof storeReviewState.$inferSelect;
+export type NewStoreReviewStateRow = typeof storeReviewState.$inferInsert;

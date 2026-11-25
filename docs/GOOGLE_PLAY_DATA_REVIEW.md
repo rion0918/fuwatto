@@ -1,5 +1,7 @@
 # Google Play 公開前のデータ取り扱い確認
 
+2026年11月16日の更新: GitHubリポジトリ名が`rion0918/pop-reminder`から`rion0918/fuwatto`へ変更されたことに伴い、GitHub Pagesの公開URLが`https://rion0918.github.io/fuwatto/privacy/`および`https://rion0918.github.io/fuwatto/terms/`へ切り替わった（旧`/pop-reminder/`はHTTP 404）。Play Consoleの「プライバシー ポリシー」URLが旧URLのままだったため否承認となり、新URLへ更新する。
+
 2026年11月10日の更新: PostHogプロジェクトの保持期間を、運営者の明示確認後に12か月へ設定した。EAS productionにもPostHog公開SDKキーを登録。過去イベントの一括削除と最終AABの実通信確認は未実施。詳細は[最終確認記録](ANDROID_RELEASE_READINESS.md)を参照。
 
 確認日: 2026年9月7日。アプリのコードと導入済みSDKを確認した記録です。本番AABの通信は未確認です。管理画面の追加確認は以下に記録します。
@@ -97,7 +99,7 @@ versionCode 46のAAB追加確認: Google用のRevenueCat公開SDK keyを埋め�
 - 問い合わせ先: rion.developer.apps@gmail.com
 - 公開用: [プライバシーポリシー](privacy/index.html)、[利用規約](terms/index.html)
 - アプリ内: 設定画面の「プライバシーポリシー」「利用規約」
-- 公開予定URL: [プライバシーポリシー](https://rion0918.github.io/pop-reminder/privacy/)、[利用規約](https://rion0918.github.io/pop-reminder/terms/)
+- 公開URL: [プライバシーポリシー](https://rion0918.github.io/fuwatto/privacy/)、[利用規約](https://rion0918.github.io/fuwatto/terms/)（リポジトリ名変更により旧 `/pop-reminder/` から移行）
 - PostHogの12か月での削除運用は、2026年9月7日に運営者が確認済みと回答。
 
 ## 実装と記載の対応
