@@ -25,3 +25,6 @@
 -keep class com.reactnativeandroidwidget.oss.HeadlessJsTaskWorker {
     public <init>(android.content.Context, androidx.work.WorkerParameters);
 }
+
+# Expo Modules Kotlin Record annotations (prevent R8 full mode from stripping PropertyDescriptor.fieldAnnotation)
+-keep @interface expo.modules.kotlin.records.** { *; }
