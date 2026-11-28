@@ -40,6 +40,8 @@ const allowedPostHogPropertyKeys = new Set([
   'first_in_quick_add',
   'elapsed_seconds',
   'created_count',
+  'trigger',
+  'prompt_count',
 ]);
 
 const posthogStorage = {

@@ -418,3 +418,17 @@ test('PostHog client configuration disables sensitive and unused automatic captu
   assert.match(source, /before_send:/);
   assert.match(source, /isAllowedAnalyticsEvent/);
 });
+
+test('PostHog allowed property keys include store review requested properties', () => {
+  const source = readSource(import.meta.url, './posthogAnalytics.ts');
+  const allowlistMatch = source.match(
+    /const allowedPostHogPropertyKeys = new Set\(\[([\s\S]*?)\]\);/,
+  );
+  assert.ok(allowlistMatch, 'allowedPostHogPropertyKeys definition should exist');
+  const allowedKeys = new Set(
+    Array.from(allowlistMatch[1].matchAll(/'([^']+)'/g), (match) => match[1]),
+  );
+
+  assert.equal(allowedKeys.has('trigger'), true);
+  assert.equal(allowedKeys.has('prompt_count'), true);
+});
