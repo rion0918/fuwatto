@@ -589,11 +589,13 @@ test('privacy policy documents the current release data handling', () => {
   const privacyPolicy = readFileSync(privacyPolicyPath, 'utf8');
 
   assert.match(privacyPolicy, /プライバシーポリシー/);
-  assert.match(privacyPolicy, /最終更新日: 2026年11月17日/);
+  assert.match(privacyPolicy, /最終更新日: 2026年11月28日/);
   assert.match(privacyPolicy, /「ふわっと。」は/);
   assert.match(privacyPolicy, /端末内に保存/);
+  assert.match(privacyPolicy, /アプリ内ストアレビュー依頼の表示条件を判定するための状態/);
   assert.match(privacyPolicy, /開発者によるリマインダーの外部サーバー同期はありません/);
   assert.match(privacyPolicy, /PostHog US Cloud/);
+  assert.match(privacyPolicy, /アプリ内ストアレビュー依頼を呼び出したきっかけ・累計回数/);
   assert.match(privacyPolicy, /いつでも停止・再開できます/);
   assert.match(
     privacyPolicy,
@@ -603,6 +605,7 @@ test('privacy policy documents the current release data handling', () => {
   assert.match(privacyPolicy, /AndroidとiOSの間で購入権利は共有されません/);
   assert.match(privacyPolicy, /通知権限/);
   assert.match(privacyPolicy, /マイクとモーション/);
+  assert.doesNotMatch(privacyPolicy, /通常のマイクボタン/);
   assert.match(privacyPolicy, /音声認識はOS標準の音声認識機能/);
   assert.match(
     privacyPolicy,
@@ -611,6 +614,7 @@ test('privacy policy documents the current release data handling', () => {
   assert.doesNotMatch(privacyPolicy, /近接センサー|近接情報/);
   assert.match(privacyPolicy, /文字起こしを分析、外部送信することはありません/);
   assert.match(privacyPolicy, /データの削除/);
+  assert.match(privacyPolicy, /iOSでは「アプリを削除」で削除/);
   assert.match(privacyPolicy, /通常保持期間は12か月/);
   assert.match(privacyPolicy, /期間経過後に削除/);
   assert.match(privacyPolicy, /個別削除依頼の受付は提供していません/);

@@ -24,7 +24,7 @@ test('published privacy policy documents local data, analytics, and purchases', 
 
   assert.match(privacy, /<meta name="viewport"/);
   assert.match(privacy, /プライバシーポリシー/);
-  assert.match(privacy, /最終更新日：2026年11月17日/);
+  assert.match(privacy, /最終更新日：2026年11月28日/);
   assert.match(privacy, /端末内に保存/);
   assert.match(privacy, /PostHog US\s+Cloud/);
   assert.match(privacy, /RevenueCat/);
@@ -45,7 +45,7 @@ test('published terms document the lifetime Pro purchase contract', () => {
 
   assert.match(terms, /<meta name="viewport"/);
   assert.match(terms, /利用規約/);
-  assert.match(terms, /最終更新日：2026年11月17日/);
+  assert.match(terms, /最終更新日：2026年11月28日/);
   assert.match(terms, /同時に6件まで/);
   assert.match(terms, /買い切り商品/);
   assert.match(terms, /忘れたくないことを無制限に追加できる/);
@@ -100,6 +100,8 @@ test('web and in-app terms explain voice confirmation, expired data, and statuto
     'src/features/settings/screens/SettingsScreen.tsx',
   ]) {
     const terms = readLegalPage(path);
+    assert.match(terms, /2026年11月28日/);
+    assert.doesNotMatch(terms, /2026年11月17日/);
     assert.match(terms, /認識結果と日時を確認/);
     assert.match(terms, /予定日時を過ぎたリマインダーも、手動で削除するまで端末内に保持/);
     assert.doesNotMatch(terms, /自動整理は初期状態でON/);
@@ -110,4 +112,56 @@ test('web and in-app terms explain voice confirmation, expired data, and statuto
     assert.match(terms, /rion\.developer\.apps@gmail\.com/);
     assert.doesNotMatch(terms, /学生の個人開発者/);
   }
+});
+
+test('privacy disclosures stay aligned on store review, voice gesture, deletion, and wording', () => {
+  for (const path of [
+    'docs/privacy/index.html',
+    'docs/PRIVACY_POLICY.md',
+    'src/features/settings/screens/SettingsScreen.tsx',
+  ]) {
+    const privacy = readLegalPage(path);
+    assert.match(privacy, /2026年11月28日/, path);
+    assert.doesNotMatch(privacy, /2026年11月17日/, path);
+    assert.match(privacy, /アプリ内ストアレビュー依頼の表示条件を判定するための状態/, path);
+    assert.match(privacy, /初回利用日時/, path);
+    assert.match(privacy, /依頼回数/, path);
+    assert.match(privacy, /アプリ内ストアレビュー依頼を呼び出したきっかけ・累計回数/, path);
+    assert.match(privacy, /左右に傾けて音声入力/, path);
+    assert.doesNotMatch(privacy, /通常のマイクボタン/, path);
+    assert.match(privacy, /AndroidではOS設定から本アプリのストレージを消去/, path);
+    assert.match(privacy, /iOSでは「アプリを削除」で削除/, path);
+    assert.match(privacy, /PostHog US\s+Cloud/, path);
+    assert.doesNotMatch(privacy, /PostHog\s*の\s*US\s*Cloud/, path);
+  }
+});
+
+test('supporting docs reflect hybrid voice recognition, past-reminder retention, and fuwatto URLs', () => {
+  const thirdPartyLicenses = readLegalPage('docs/THIRD_PARTY_LICENSES.md');
+  assert.match(thirdPartyLicenses, /requiresOnDeviceRecognition: false/);
+  assert.doesNotMatch(thirdPartyLicenses, /requiresOnDeviceRecognition: true/);
+  assert.doesNotMatch(thirdPartyLicenses, /no network speech/);
+
+  const googlePlayDataReview = readLegalPage('docs/GOOGLE_PLAY_DATA_REVIEW.md');
+  assert.match(googlePlayDataReview, /手動削除するまで端末内に保持/);
+  assert.match(googlePlayDataReview, /store_review_state/);
+  assert.doesNotMatch(googlePlayDataReview, /初期ON、予定日の終了後に起動時などの整理処理で削除/);
+
+  const storeListingDraft = readLegalPage('docs/STORE_LISTING_DRAFT.md');
+  assert.doesNotMatch(storeListingDraft, /マイクボタンでの日本語音声入力/);
+
+  const androidReleaseReadiness = readLegalPage('docs/ANDROID_RELEASE_READINESS.md');
+  const currentPolicyStart = androidReleaseReadiness.indexOf(
+    '### 現行の掲載情報・Data Safety・プライバシーポリシー',
+  );
+  const currentPolicyEnd = androidReleaseReadiness.indexOf('### Play Consoleの追加確認');
+  assert.ok(currentPolicyStart !== -1 && currentPolicyEnd > currentPolicyStart);
+  const currentPolicySection = androidReleaseReadiness.slice(currentPolicyStart, currentPolicyEnd);
+  assert.match(currentPolicySection, /https:\/\/rion0918\.github\.io\/fuwatto\/privacy\//);
+  assert.match(currentPolicySection, /https:\/\/rion0918\.github\.io\/fuwatto\/terms\//);
+  assert.doesNotMatch(currentPolicySection, /github\.io\/pop-reminder/);
+
+  const adrReadme = readLegalPage('docs/adr/README.md');
+  assert.match(adrReadme, /https:\/\/github\.com\/rion0918\/fuwatto\/discussions\/categories\/adr/);
+  assert.doesNotMatch(adrReadme, /github\.com\/rion0918\/pop-reminder/);
 });

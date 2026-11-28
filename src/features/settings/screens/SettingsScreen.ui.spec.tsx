@@ -1,3 +1,4 @@
+import { Alert, Linking } from 'react-native';
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 import type { AppSettings, UpdateAppSettingsInput } from '../domain/appSettings';
 
@@ -564,5 +565,116 @@ describe('SettingsScreen raise-to-speak setup', () => {
     } finally {
       jest.useRealTimers();
     }
+  });
+});
+
+describe('SettingsScreen legal document modal', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockEvents.length = 0;
+    mockProAccessState = 'unavailable';
+    mockSettingsState = makeSettings();
+    mockSettingsLoading = false;
+    mockPreviousTimePending = false;
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it('opens the privacy policy with updated disclosures, selectable text, and working links', async () => {
+    const openUrlSpy = jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
+    const view = await render(<SettingsScreen />);
+
+    await fireEvent.press(view.getByText('プライバシーポリシー', { exact: true }));
+
+    expect(view.getByText('最終更新日: 2026年11月28日')).toBeOnTheScreen();
+    expect(view.getByText(/アプリ内ストアレビュー依頼の表示条件を判定するための状態/)).toHaveProp(
+      'selectable',
+      true,
+    );
+    expect(view.getByText(/iOSでは「アプリを削除」で削除されます/)).toHaveProp('selectable', true);
+
+    const expectedLinks = [
+      {
+        name: 'PostHogのプライバシーポリシーをブラウザで開く',
+        url: 'https://posthog.com/privacy',
+      },
+      {
+        name: 'RevenueCatのプライバシーポリシーをブラウザで開く',
+        url: 'https://www.revenuecat.com/privacy',
+      },
+      {
+        name: 'Googleのプライバシーポリシーをブラウザで開く',
+        url: 'https://policies.google.com/privacy?hl=ja',
+      },
+      {
+        name: 'Appleのプライバシーポリシーをブラウザで開く',
+        url: 'https://www.apple.com/legal/privacy/jp/',
+      },
+      {
+        name: 'rion.developer.apps@gmail.com にメールで問い合わせる',
+        url: 'mailto:rion.developer.apps@gmail.com',
+      },
+    ];
+
+    for (const expectedLink of expectedLinks) {
+      const linkButton = view.getByRole('link', { name: expectedLink.name });
+      expect(linkButton).toBeOnTheScreen();
+      await fireEvent.press(linkButton);
+      await waitFor(() => expect(openUrlSpy).toHaveBeenCalledWith(expectedLink.url));
+    }
+
+    expect(openUrlSpy).toHaveBeenCalledTimes(expectedLinks.length);
+    view.unmount();
+  });
+
+  it('opens the terms document and launches the support mail link', async () => {
+    const openUrlSpy = jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
+    const view = await render(<SettingsScreen />);
+
+    await fireEvent.press(view.getByText('利用規約', { exact: true }));
+
+    expect(view.getByText('最終更新日: 2026年11月28日')).toBeOnTheScreen();
+    expect(view.getByText(/本規約は日本法に準拠します。/)).toHaveProp('selectable', true);
+
+    await fireEvent.press(
+      view.getByRole('link', { name: /rion\.developer\.apps@gmail\.com にメールで問い合わせる/ }),
+    );
+    await waitFor(() =>
+      expect(openUrlSpy).toHaveBeenCalledWith('mailto:rion.developer.apps@gmail.com'),
+    );
+    view.unmount();
+  });
+
+  it('alerts with a fallback message when a legal link fails to open', async () => {
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    jest.spyOn(Linking, 'openURL').mockRejectedValue(new Error('cannot open url'));
+    const view = await render(<SettingsScreen />);
+
+    await fireEvent.press(view.getByText('プライバシーポリシー', { exact: true }));
+
+    await fireEvent.press(
+      view.getByRole('link', { name: 'PostHogのプライバシーポリシーをブラウザで開く' }),
+    );
+    await waitFor(() =>
+      expect(alertSpy).toHaveBeenCalledWith(
+        'リンクを開けませんでした',
+        'https://posthog.com/privacy をブラウザで開いてご確認ください。',
+      ),
+    );
+
+    await fireEvent.press(
+      view.getByRole('link', { name: 'rion.developer.apps@gmail.com にメールで問い合わせる' }),
+    );
+    await waitFor(() =>
+      expect(alertSpy).toHaveBeenCalledWith(
+        'リンクを開けませんでした',
+        'メールアプリを開けませんでした。rion.developer.apps@gmail.com へご連絡ください。',
+      ),
+    );
+    expect(warnSpy).toHaveBeenCalledTimes(2);
+    view.unmount();
   });
 });
