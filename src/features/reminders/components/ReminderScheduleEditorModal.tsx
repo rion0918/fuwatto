@@ -9,22 +9,36 @@ import { GestureHandlerRootView, ScrollView } from 'react-native-gesture-handler
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { palette } from '../../../constants/colors';
+import { DEFAULT_TIME_PRESETS, type TimePreset } from '../../../shared/utils/timePresets';
 import type { Reminder } from '../domain/reminder';
 import {
+  applyReminderScheduleAllDayChange,
   createReminderScheduleDraft,
   evaluateReminderScheduleDraft,
+  resolveDefaultTimeForScheduleDate,
   type ReminderScheduleDraft,
 } from '../utils/reminderScheduleEditor';
 import { formatReminderDetailDate, formatReminderDetailTime } from '../utils/reminderDateFormat';
 import { ReminderAllDaySlider } from './ReminderAllDaySlider';
 
+export type ReminderScheduleSaveError = {
+  message: string;
+  isActiveLimitReached?: boolean;
+};
+
 type ReminderScheduleEditorModalProps = {
   visible: boolean;
   reminder: Pick<Reminder, 'targetAt' | 'previousNotifyAt' | 'allDay'>;
+  previousNotifyTime?: string;
   allDayNotifyTime?: string;
+  timePresets?: TimePreset[];
   isSaving: boolean;
+  saveError?: ReminderScheduleSaveError | null;
+  isOpeningProPaywall?: boolean;
   onConfirm: (draft: ReminderScheduleDraft) => void;
   onClose: () => void;
+  onClearSaveError?: () => void;
+  onOpenProPaywall?: () => void;
 };
 
 type ActivePicker = 'date' | 'time' | null;
@@ -38,24 +52,40 @@ const pickerDisplay = Platform.select({
 export function ReminderScheduleEditorModal({
   visible,
   reminder,
+  previousNotifyTime,
   allDayNotifyTime = '09:00',
+  timePresets = DEFAULT_TIME_PRESETS,
   isSaving,
+  saveError = null,
+  isOpeningProPaywall = false,
   onConfirm,
   onClose,
+  onClearSaveError,
+  onOpenProPaywall,
 }: ReminderScheduleEditorModalProps) {
   const [draft, setDraft] = useState<ReminderScheduleDraft>(() =>
-    createReminderScheduleDraft(reminder),
+    createReminderScheduleDraft(reminder, { presets: timePresets }),
+  );
+  const [initialDraft, setInitialDraft] = useState<ReminderScheduleDraft>(() =>
+    createReminderScheduleDraft(reminder, { presets: timePresets }),
   );
   const [activePicker, setActivePicker] = useState<ActivePicker>(null);
   const wasVisibleRef = useRef(false);
+  const hasExplicitTimeRef = useRef(!reminder.allDay);
   const safeAreaInsets = useSafeAreaInsets();
   const reduceMotion = useReducedMotion();
 
-  const initialDraft = createReminderScheduleDraft(reminder);
-  const previousNotifyTime = format(new Date(reminder.previousNotifyAt), 'HH:mm');
-  const evaluated = useMemo(
-    () => evaluateReminderScheduleDraft(draft, previousNotifyTime, new Date(), allDayNotifyTime),
-    [draft, previousNotifyTime, allDayNotifyTime],
+  const fallbackPreviousDate = new Date(reminder.previousNotifyAt);
+  const resolvedPreviousNotifyTime =
+    previousNotifyTime ??
+    (Number.isNaN(fallbackPreviousDate.getTime())
+      ? '20:00'
+      : format(fallbackPreviousDate, 'HH:mm'));
+  const evaluated = evaluateReminderScheduleDraft(
+    draft,
+    resolvedPreviousNotifyTime,
+    new Date(),
+    allDayNotifyTime,
   );
   const minimumDate = startOfDay(new Date());
   const datePickerValue = useMemo(
@@ -68,28 +98,33 @@ export function ReminderScheduleEditorModal({
     date.setHours(hours, minutes, 0, 0);
     return date;
   }, [draft.targetTime]);
-  const previousDate = evaluated.schedule?.previousNotifyAt ?? new Date(reminder.previousNotifyAt);
+  const previousDate = evaluated.schedule?.previousNotifyAt ?? fallbackPreviousDate;
+  const isBusy = isSaving || isOpeningProPaywall;
   const hasChanges =
     draft.targetDate !== initialDraft.targetDate ||
-    draft.targetTime !== initialDraft.targetTime ||
-    draft.allDay !== initialDraft.allDay;
+    Boolean(draft.allDay) !== Boolean(initialDraft.allDay) ||
+    (!draft.allDay && draft.targetTime !== initialDraft.targetTime);
   const previousNoticeText = !evaluated.isPreviousFuture
     ? '前日のお知らせ時刻は過ぎているため、当日だけお知らせします'
     : hasChanges
       ? `前日のお知らせも ${formatReminderDetailDate(previousDate)} ${formatReminderDetailTime(previousDate)} に変わります`
       : `前日のお知らせは ${formatReminderDetailDate(previousDate)} ${formatReminderDetailTime(previousDate)}`;
-  const isSaveDisabled = isSaving || !evaluated.isValid || !evaluated.isTargetFuture;
+  const isSaveDisabled = isBusy || !evaluated.isValid || !evaluated.isTargetFuture;
 
   useEffect(() => {
     if (visible && !wasVisibleRef.current) {
-      setDraft(createReminderScheduleDraft(reminder));
+      const nextDraft = createReminderScheduleDraft(reminder, { presets: timePresets });
+      setDraft(nextDraft);
+      setInitialDraft(nextDraft);
+      hasExplicitTimeRef.current = !reminder.allDay;
       setActivePicker(null);
     }
 
     wasVisibleRef.current = visible;
-  }, [reminder, visible]);
+  }, [reminder, timePresets, visible]);
 
   const handleDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
+    if (isBusy) return;
     if (event.type === 'dismissed') {
       setActivePicker(null);
       return;
@@ -98,11 +133,20 @@ export function ReminderScheduleEditorModal({
     if (!selectedDate) return;
 
     const nextDate = selectedDate < minimumDate ? minimumDate : selectedDate;
-    setDraft((current) => ({ ...current, targetDate: format(nextDate, 'yyyy-MM-dd') }));
+    const nextTargetDate = format(nextDate, 'yyyy-MM-dd');
+    onClearSaveError?.();
+    setDraft((current) => ({
+      ...current,
+      targetDate: nextTargetDate,
+      ...(!hasExplicitTimeRef.current
+        ? { targetTime: resolveDefaultTimeForScheduleDate(nextTargetDate, timePresets) }
+        : {}),
+    }));
     if (Platform.OS === 'android') setActivePicker(null);
   };
 
   const handleTimeChange = (event: DateTimePickerEvent, selectedTime?: Date) => {
+    if (isBusy) return;
     if (event.type === 'dismissed') {
       setActivePicker(null);
       return;
@@ -110,8 +154,24 @@ export function ReminderScheduleEditorModal({
 
     if (!selectedTime) return;
 
+    hasExplicitTimeRef.current = true;
+    onClearSaveError?.();
     setDraft((current) => ({ ...current, targetTime: format(selectedTime, 'HH:mm') }));
     if (Platform.OS === 'android') setActivePicker(null);
+  };
+
+  const handleAllDayChange = (nextAllDay: boolean) => {
+    if (isBusy) return;
+    onClearSaveError?.();
+    if (nextAllDay) {
+      setActivePicker((current) => (current === 'time' ? null : current));
+    }
+    setDraft((current) =>
+      applyReminderScheduleAllDayChange(current, nextAllDay, {
+        hasExplicitTime: hasExplicitTimeRef.current,
+        presets: timePresets,
+      }),
+    );
   };
 
   const renderPicker = () => {
@@ -126,6 +186,7 @@ export function ReminderScheduleEditorModal({
         is24Hour={activePicker === 'time'}
         locale="ja-JP"
         themeVariant="light"
+        disabled={isBusy}
         onChange={activePicker === 'date' ? handleDateChange : handleTimeChange}
       />
     );
@@ -133,7 +194,7 @@ export function ReminderScheduleEditorModal({
     if (Platform.OS === 'android') return picker;
 
     return (
-      <View style={styles.pickerSurface}>
+      <View pointerEvents={isBusy ? 'none' : 'auto'} style={styles.pickerSurface}>
         <View style={styles.inlinePicker}>{picker}</View>
       </View>
     );
@@ -148,7 +209,7 @@ export function ReminderScheduleEditorModal({
         statusBarTranslucent
         navigationBarTranslucent
         onRequestClose={() => {
-          if (!isSaving) onClose();
+          if (!isBusy) onClose();
         }}
       >
         <GestureHandlerRootView style={styles.modalGestureRoot}>
@@ -156,8 +217,8 @@ export function ReminderScheduleEditorModal({
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="日時変更をキャンセル"
-              accessibilityState={{ disabled: isSaving }}
-              disabled={isSaving}
+              accessibilityState={{ disabled: isBusy }}
+              disabled={isBusy}
               onPress={onClose}
               style={styles.backdrop}
             />
@@ -177,14 +238,14 @@ export function ReminderScheduleEditorModal({
                     cssInterop={false}
                     accessibilityRole="button"
                     accessibilityLabel="日時変更をキャンセル"
-                    accessibilityState={{ disabled: isSaving }}
-                    disabled={isSaving}
+                    accessibilityState={{ disabled: isBusy }}
+                    disabled={isBusy}
                     hitSlop={6}
                     onPress={onClose}
                     style={({ pressed }) => [
                       styles.actionButton,
-                      pressed && !isSaving ? styles.actionButtonPressed : null,
-                      isSaving ? styles.actionButtonDisabled : null,
+                      pressed && !isBusy ? styles.actionButtonPressed : null,
+                      isBusy ? styles.actionButtonDisabled : null,
                     ]}
                   >
                     <Text style={styles.cancelActionText}>キャンセル</Text>
@@ -217,13 +278,13 @@ export function ReminderScheduleEditorModal({
                     accessibilityRole="button"
                     accessibilityLabel="日付を変更"
                     accessibilityHint={formatReminderDetailDate(datePickerValue)}
-                    accessibilityState={{ selected: activePicker === 'date', disabled: isSaving }}
-                    disabled={isSaving}
+                    accessibilityState={{ selected: activePicker === 'date', disabled: isBusy }}
+                    disabled={isBusy}
                     onPress={() => setActivePicker('date')}
                     style={({ pressed }) => [
                       styles.scheduleDateButton,
                       activePicker === 'date' ? styles.scheduleValueActive : null,
-                      isSaving ? styles.scheduleValueDisabled : null,
+                      isBusy ? styles.scheduleValueDisabled : null,
                       pressed ? styles.scheduleValuePressed : null,
                     ]}
                   >
@@ -245,13 +306,13 @@ export function ReminderScheduleEditorModal({
                       accessibilityRole="button"
                       accessibilityLabel="時刻を変更"
                       accessibilityHint={formatReminderDetailTime(timePickerValue)}
-                      accessibilityState={{ selected: activePicker === 'time', disabled: isSaving }}
-                      disabled={isSaving}
+                      accessibilityState={{ selected: activePicker === 'time', disabled: isBusy }}
+                      disabled={isBusy}
                       onPress={() => setActivePicker('time')}
                       style={({ pressed }) => [
                         styles.scheduleTimeButton,
                         activePicker === 'time' ? styles.scheduleValueActive : null,
-                        isSaving ? styles.scheduleValueDisabled : null,
+                        isBusy ? styles.scheduleValueDisabled : null,
                         pressed ? styles.scheduleValuePressed : null,
                       ]}
                     >
@@ -267,17 +328,49 @@ export function ReminderScheduleEditorModal({
                       dateLabel={formatReminderDetailDate(datePickerValue)}
                       time={formatReminderDetailTime(timePickerValue)}
                       allDayNotifyTime={allDayNotifyTime}
-                      disabled={isSaving}
+                      disabled={isBusy}
                       reduceMotion={Boolean(reduceMotion)}
-                      onChange={(allDay) => setDraft((current) => ({ ...current, allDay }))}
+                      onChange={handleAllDayChange}
                     />
                   </View>
                 </View>
 
                 {Platform.OS === 'ios' ? renderPicker() : null}
 
-                {!evaluated.isTargetFuture ? (
+                {!evaluated.isTargetFuture && !saveError ? (
                   <Text style={styles.targetWarning}>過去の日時には変更できません</Text>
+                ) : null}
+
+                {saveError ? (
+                  <View style={styles.saveErrorCard}>
+                    <View accessible accessibilityRole="alert" style={styles.saveErrorMessageGroup}>
+                      <Text style={styles.saveErrorTitle}>{saveError.message}</Text>
+                      {saveError.isActiveLimitReached ? (
+                        <Text style={styles.saveErrorDescription}>
+                          Pro版ふわっと。なら、忘れたくないことを無制限に残せます。
+                        </Text>
+                      ) : null}
+                    </View>
+                    {saveError.isActiveLimitReached && onOpenProPaywall ? (
+                      <Pressable
+                        cssInterop={false}
+                        accessibilityRole="button"
+                        accessibilityLabel="Proを見る"
+                        accessibilityState={{ disabled: isBusy }}
+                        disabled={isBusy}
+                        onPress={onOpenProPaywall}
+                        style={({ pressed }) => [
+                          styles.proActionButton,
+                          pressed && !isBusy ? styles.actionButtonPressed : null,
+                          isBusy ? styles.actionButtonDisabled : null,
+                        ]}
+                      >
+                        <Text style={styles.proActionButtonText}>
+                          {isOpeningProPaywall ? 'Proを確認中…' : 'Proを見る'}
+                        </Text>
+                      </Pressable>
+                    ) : null}
+                  </View>
                 ) : null}
 
                 <View
@@ -457,6 +550,42 @@ const styles = StyleSheet.create({
     lineHeight: 19,
     fontWeight: '600',
     textAlign: 'center',
+  },
+  saveErrorCard: {
+    marginTop: 12,
+    padding: 14,
+    borderRadius: 18,
+    backgroundColor: palette.dangerSoft,
+    gap: 8,
+  },
+  saveErrorMessageGroup: {
+    gap: 8,
+  },
+  saveErrorTitle: {
+    color: palette.dangerText,
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: '700',
+  },
+  saveErrorDescription: {
+    color: palette.inkSecondary,
+    fontSize: 13,
+    lineHeight: 19,
+    fontWeight: '500',
+  },
+  proActionButton: {
+    minHeight: 48,
+    marginTop: 2,
+    paddingHorizontal: 16,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: palette.lavenderDeep,
+  },
+  proActionButtonText: {
+    color: palette.white,
+    fontSize: 15,
+    fontWeight: '700',
   },
   previousNotice: {
     minHeight: 44,

@@ -92,7 +92,12 @@ test('reminder detail sheet opens the schedule editor and saves its result', () 
       /onUpdateSchedule:/,
       /const handleScheduleConfirm = useCallback/,
       /ReminderScheduleEditorModal/,
+      /previousNotifyTime=\{previousNotifyTime\}/,
+      /timePresets=\{timePresets\}/,
+      /saveError=\{scheduleEditorError\}/,
+      /isOpeningProPaywall=\{isOpeningProPaywall\}/,
       /onConfirm=\{handleScheduleConfirm\}/,
+      /onClose=\{handleCloseScheduleEditor\}/,
       /日時は変更しましたが、通知を予約できませんでした/,
     ],
     excludes: [
