@@ -11,7 +11,7 @@ const homeSource = readSource(import.meta.url, '../features/reminders/screens/Ho
 
 test('widget deep links always land on home before opening add or detail UI', () => {
   assertSourceIncludes(source, [
-    /import \{ Stack, useRouter, useRootNavigationState \} from 'expo-router';/,
+    /import \{ Stack, usePathname, useRouter, useRootNavigationState \} from 'expo-router';/,
     /const router = useRouter\(\);/,
     /pathname: '\/',/,
     /action: intent\.action,/,

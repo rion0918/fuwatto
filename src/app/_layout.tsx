@@ -1,8 +1,8 @@
 import '../../global.css';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
-import { Stack, useRouter, useRootNavigationState } from 'expo-router';
+import { Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Stack, usePathname, useRouter, useRootNavigationState } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as Linking from 'expo-linking';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -20,23 +20,31 @@ type BootstrapState = 'loading' | 'ready' | 'error';
 export default function RootLayout() {
   const router = useRouter();
   const navigationState = useRootNavigationState();
+  const pathname = usePathname();
   const { width: windowWidth } = useWindowDimensions();
   const [bootstrapState, setBootstrapState] = useState<BootstrapState>('loading');
   const intentBufferRef = useRef(createDeepLinkIntentBuffer());
   const intentSequenceRef = useRef(0);
   const navigationReadyRef = useRef(false);
+  const pathnameRef = useRef(pathname);
+  pathnameRef.current = pathname;
   const bootstrapBubbleSize = Math.round(Math.min(Math.max(windowWidth * 0.68, 184), 286));
 
   const publishIntent = useCallback(
     (intent: DeepLinkIntent) => {
       intentSequenceRef.current += 1;
+      const params = {
+        action: intent.action,
+        id: intent.action === 'view' ? intent.id : undefined,
+        intent: String(intentSequenceRef.current),
+      };
+      if (Platform.OS === 'android' && intent.action === 'view' && pathnameRef.current === '/') {
+        router.setParams(params);
+        return;
+      }
       router.replace({
         pathname: '/',
-        params: {
-          action: intent.action,
-          id: intent.action === 'view' ? intent.id : undefined,
-          intent: String(intentSequenceRef.current),
-        },
+        params,
       });
     },
     [router],
