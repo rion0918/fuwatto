@@ -28,3 +28,14 @@
 
 # Expo Modules Kotlin Record annotations (prevent R8 full mode from stripping PropertyDescriptor.fieldAnnotation)
 -keep @interface expo.modules.kotlin.records.** { *; }
+
+# Expo stores scheduled requests with Java serialization. Preserve NotificationContent's
+# private serialization hooks and the class names and signatures used by older requests.
+-keep class expo.modules.notifications.notifications.model.NotificationContent { *; }
+-keep class expo.modules.notifications.notifications.model.NotificationRequest { *; }
+-keep class expo.modules.notifications.notifications.triggers.ChannelAwareTrigger { *; }
+-keep class expo.modules.notifications.notifications.triggers.DateTrigger { *; }
+-keep class expo.modules.notifications.notifications.triggers.TimeIntervalTrigger { *; }
+-keep interface expo.modules.notifications.notifications.interfaces.INotificationContent
+-keep interface expo.modules.notifications.notifications.interfaces.NotificationTrigger
+-keep interface expo.modules.notifications.notifications.interfaces.SchedulableNotificationTrigger

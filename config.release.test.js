@@ -367,6 +367,50 @@ test('Android release builds enable R8 optimization and keep widget entry points
   assert.match(verifyAabScript, /fieldAnnotation/);
 });
 
+test('Android R8 preserves the serialized Expo reminder notification classes', () => {
+  const proguardRules = readFileSync(join(__dirname, 'android/app/proguard-rules.pro'), 'utf8');
+  const rules = proguardRules.split(/\r?\n/);
+  const packagePrefix = 'expo.modules.notifications.notifications';
+
+  // The classes without an explicit serialVersionUID also need their member signatures.
+  for (const className of [
+    'model.NotificationContent',
+    'model.NotificationRequest',
+    'triggers.ChannelAwareTrigger',
+    'triggers.DateTrigger',
+    'triggers.TimeIntervalTrigger',
+  ]) {
+    assert.ok(rules.includes(`-keep class ${packagePrefix}.${className} { *; }`), className);
+  }
+  for (const interfaceName of [
+    'INotificationContent',
+    'NotificationTrigger',
+    'SchedulableNotificationTrigger',
+  ]) {
+    assert.ok(
+      rules.includes(`-keep interface ${packagePrefix}.interfaces.${interfaceName}`),
+      interfaceName,
+    );
+  }
+});
+
+test('Expo notification serialization preserves the UIDs of existing Android requests', () => {
+  const notificationPatch = readFileSync(
+    join(__dirname, 'patches/expo-notifications@0.32.17.patch'),
+    'utf8',
+  );
+
+  assert.match(notificationPatch, /^- {4}"publication": \{$/m);
+  assert.match(
+    notificationPatch,
+    /\+\s+private static final long serialVersionUID = 2436814163774274309L;/,
+  );
+  assert.match(
+    notificationPatch,
+    /\+\s+private const val serialVersionUID = -4194210477031268790L/,
+  );
+});
+
 test('Android notifications have a release-ready small icon and accent color', () => {
   const notificationsPlugin = appConfig.expo.plugins.find((plugin) => {
     return Array.isArray(plugin) && plugin[0] === 'expo-notifications';
