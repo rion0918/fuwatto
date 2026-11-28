@@ -66,6 +66,37 @@ if (proguardMap.byteLength === 0) {
 }
 console.log(`${proguardMapPath}: ${proguardMap.byteLength} bytes`);
 
+const proguardMapText = proguardMap.toString('utf8');
+const propertyDescriptorHeader =
+  'expo.modules.kotlin.records.RecordTypeConverter$PropertyDescriptor ->';
+const descriptorIndex = proguardMapText.indexOf(propertyDescriptorHeader);
+if (descriptorIndex === -1) {
+  throw new Error(
+    `Missing Expo RecordTypeConverter$PropertyDescriptor entry in ${proguardMapPath}`,
+  );
+}
+const descriptorLines = proguardMapText
+  .slice(descriptorIndex, descriptorIndex + 8192)
+  .split(/\r?\n/);
+const descriptorBlock = [descriptorLines[0]];
+for (let i = 1; i < descriptorLines.length; i += 1) {
+  const line = descriptorLines[i];
+  if (line.length > 0 && !line.startsWith(' ') && !line.startsWith('#')) {
+    break;
+  }
+  descriptorBlock.push(line);
+}
+if (
+  !descriptorBlock.some((line) =>
+    /^\s+expo\.modules\.kotlin\.records\.Field\s+fieldAnnotation\s+->/.test(line),
+  )
+) {
+  throw new Error(
+    `R8 stripped RecordTypeConverter$PropertyDescriptor.fieldAnnotation in ${proguardMapPath}`,
+  );
+}
+console.log('RecordTypeConverter$PropertyDescriptor.fieldAnnotation verified in proguard.map');
+
 const dexEntries = entries.filter((entry) => /^base\/dex\/[^/]+\.dex$/.test(entry)).sort();
 if (dexEntries.length === 0) {
   throw new Error('Missing base/dex/*.dex entries in AAB');

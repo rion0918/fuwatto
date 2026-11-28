@@ -355,6 +355,7 @@ test('Android release builds enable R8 optimization and keep widget entry points
   assert.match(proguardRules, /com\.rion0918\.popreminder\.widget\.PopReminderWidget/);
   assert.match(proguardRules, /com\.reactnativeandroidwidget\.RNWidgetBackgroundTaskWorker/);
   assert.match(proguardRules, /com\.reactnativeandroidwidget\.oss\.HeadlessJsTaskWorker/);
+  assert.match(proguardRules, /^-keep @interface expo\.modules\.kotlin\.records\.\*\* \{ \*; \}$/m);
   assert.doesNotMatch(proguardRules, /-dontobfuscate|-dontoptimize/);
 
   assert.match(
@@ -362,6 +363,8 @@ test('Android release builds enable R8 optimization and keep widget entry points
     /BUNDLE-METADATA\/com\.android\.tools\.build\.obfuscation\/proguard\.map/,
   );
   assert.match(verifyAabScript, /base\/dex/);
+  assert.match(verifyAabScript, /RecordTypeConverter\$PropertyDescriptor/);
+  assert.match(verifyAabScript, /fieldAnnotation/);
 });
 
 test('Android notifications have a release-ready small icon and accent color', () => {
