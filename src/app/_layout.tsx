@@ -11,6 +11,7 @@ import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { AppProviders } from '../bootstrap/AppProviders';
 import { configureAppRuntime, prepareAppData } from '../bootstrap/appInitialization';
 import { createDeepLinkIntentBuffer, type DeepLinkIntent } from '../bootstrap/deepLinkIntent';
+import { subscribeReminderNotificationIntent } from '../bootstrap/reminderNotificationIntent';
 import { palette } from '../constants/colors';
 import { EmptyReminderBubble } from '../features/reminders/components/EmptyReminderBubble';
 
@@ -74,13 +75,22 @@ export default function RootLayout() {
       receivedEvent = true;
       receiveUrl(event.url);
     });
+    const unsubscribeNotifications = subscribeReminderNotificationIntent((url, { isInitial }) => {
+      if (!isInitial) {
+        receivedEvent = true;
+      }
+      receiveUrl(url);
+    });
     void Linking.getInitialURL()
       .then((url) => {
         if (!receivedEvent) receiveUrl(url);
       })
       .catch(() => {});
     void prepare();
-    return () => subscription.remove();
+    return () => {
+      subscription.remove();
+      unsubscribeNotifications();
+    };
   }, [prepare, receiveUrl]);
 
   useEffect(() => {

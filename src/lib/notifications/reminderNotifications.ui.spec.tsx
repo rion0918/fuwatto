@@ -8,9 +8,14 @@ const mockGetAllScheduledNotificationsAsync = jest.fn();
 const mockSetNotificationHandler = jest.fn();
 const mockSetNotificationChannelAsync = jest.fn();
 const mockDeleteNotificationChannelAsync = jest.fn();
+const mockGetLastNotificationResponse = jest.fn();
+const mockClearLastNotificationResponse = jest.fn();
+const mockRemoveNotificationResponseSubscription = jest.fn();
+let mockNotificationResponseListener: ((response: unknown) => void) | null = null;
 let mockPlatformOs: 'ios' | 'android' = 'ios';
 
 jest.mock('expo-notifications', () => ({
+  DEFAULT_ACTION_IDENTIFIER: 'expo.modules.notifications.actions.DEFAULT',
   SchedulableTriggerInputTypes: {
     DATE: 'date',
     TIME_INTERVAL: 'timeInterval',
@@ -33,6 +38,12 @@ jest.mock('expo-notifications', () => ({
   setNotificationChannelAsync: (...args: unknown[]) => mockSetNotificationChannelAsync(...args),
   deleteNotificationChannelAsync: (...args: unknown[]) =>
     mockDeleteNotificationChannelAsync(...args),
+  addNotificationResponseReceivedListener: (listener: (response: unknown) => void) => {
+    mockNotificationResponseListener = listener;
+    return { remove: mockRemoveNotificationResponseSubscription };
+  },
+  getLastNotificationResponse: (...args: unknown[]) => mockGetLastNotificationResponse(...args),
+  clearLastNotificationResponse: (...args: unknown[]) => mockClearLastNotificationResponse(...args),
 }));
 
 jest.mock('react-native', () => ({
@@ -49,11 +60,13 @@ const {
   configureAndroidNotificationChannels,
   configureNotificationHandler,
   deleteLegacyAndroidNotificationChannels,
+  extractReminderIdFromNotificationResponse,
   getLegacyScheduledNotificationIds,
   schedulePreviousReminderNotification,
   scheduleReminderNotifications,
   scheduleTargetReminderNotification,
   scheduleTestReminderNotifications,
+  subscribeReminderNotificationResponses,
 } =
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   require('./reminderNotifications') as typeof import('./reminderNotifications');
@@ -85,6 +98,8 @@ describe('reminderNotifications', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockPlatformOs = 'ios';
+    mockNotificationResponseListener = null;
+    mockGetLastNotificationResponse.mockReturnValue(null);
     mockGetPermissionsAsync.mockResolvedValue({ status: 'granted', canAskAgain: true });
     mockRequestPermissionsAsync.mockResolvedValue({ status: 'granted', canAskAgain: true });
     mockScheduleNotificationAsync
@@ -388,5 +403,140 @@ describe('reminderNotifications', () => {
     expect(mockDeleteNotificationChannelAsync).toHaveBeenCalledWith('reminder-silent');
     expect(mockDeleteNotificationChannelAsync).toHaveBeenCalledWith('reminder-alerts');
     mockPlatformOs = 'ios';
+  });
+
+  it('delivers warm notification taps with reminderId and clears the last response', () => {
+    const onReminderTap = jest.fn();
+    const unsubscribe = subscribeReminderNotificationResponses(onReminderTap);
+
+    mockNotificationResponseListener?.({
+      actionIdentifier: 'expo.modules.notifications.actions.DEFAULT',
+      notification: {
+        date: 1700000001,
+        request: {
+          identifier: 'notif-warm-1',
+          content: { data: { reminderId: 'rem-1' } },
+          trigger: null,
+        },
+      },
+    });
+
+    expect(onReminderTap).toHaveBeenCalledTimes(1);
+    expect(onReminderTap).toHaveBeenCalledWith('rem-1', { isInitial: false });
+    expect(mockClearLastNotificationResponse).toHaveBeenCalledTimes(1);
+
+    unsubscribe();
+    expect(mockRemoveNotificationResponseSubscription).toHaveBeenCalledTimes(1);
+  });
+
+  it('delivers cold-start notification taps once even when the listener replays the same response, while allowing later taps for the same reminder', () => {
+    const coldResponse = {
+      actionIdentifier: 'expo.modules.notifications.actions.DEFAULT',
+      notification: {
+        date: 1700000000,
+        request: {
+          identifier: 'notif-cold',
+          content: { data: { reminderId: 'rem-cold' } },
+          trigger: null,
+        },
+      },
+    };
+    mockGetLastNotificationResponse.mockReturnValueOnce(coldResponse);
+    const onReminderTap = jest.fn();
+
+    subscribeReminderNotificationResponses(onReminderTap);
+
+    expect(onReminderTap).toHaveBeenCalledTimes(1);
+    expect(onReminderTap).toHaveBeenLastCalledWith('rem-cold', { isInitial: true });
+    expect(mockClearLastNotificationResponse).toHaveBeenCalledTimes(1);
+
+    mockNotificationResponseListener?.(coldResponse);
+    expect(onReminderTap).toHaveBeenCalledTimes(1);
+
+    mockNotificationResponseListener?.({
+      actionIdentifier: 'expo.modules.notifications.actions.DEFAULT',
+      notification: {
+        date: 1700000099,
+        request: {
+          identifier: 'notif-target',
+          content: { data: { reminderId: 'rem-cold' } },
+          trigger: null,
+        },
+      },
+    });
+    expect(onReminderTap).toHaveBeenCalledTimes(2);
+    expect(onReminderTap).toHaveBeenLastCalledWith('rem-cold', { isInitial: false });
+  });
+
+  it('ignores non-default actions, invalid reminderId payloads, and native response errors safely', () => {
+    const onReminderTap = jest.fn();
+    mockGetLastNotificationResponse.mockImplementationOnce(() => {
+      throw new Error('UnavailabilityError');
+    });
+    mockClearLastNotificationResponse.mockImplementation(() => {
+      throw new Error('UnavailabilityError');
+    });
+
+    expect(
+      extractReminderIdFromNotificationResponse({
+        actionIdentifier: 'custom-action',
+        notification: {
+          date: 1700000000,
+          request: {
+            identifier: 'n1',
+            content: { data: { reminderId: 'rem-1' } },
+            trigger: null,
+          },
+        },
+      } as never),
+    ).toBeNull();
+    expect(
+      extractReminderIdFromNotificationResponse({
+        actionIdentifier: 'expo.modules.notifications.actions.DEFAULT',
+        notification: {
+          date: 1700000000,
+          request: {
+            identifier: 'n2',
+            content: { data: { reminderId: '   ' } },
+            trigger: null,
+          },
+        },
+      } as never),
+    ).toBeNull();
+
+    subscribeReminderNotificationResponses(onReminderTap);
+
+    mockNotificationResponseListener?.({
+      actionIdentifier: 'dismiss',
+      notification: {
+        date: 1700000002,
+        request: { identifier: 'n3', content: { data: { reminderId: 'rem-1' } }, trigger: null },
+      },
+    });
+    mockNotificationResponseListener?.({
+      actionIdentifier: 'expo.modules.notifications.actions.DEFAULT',
+      notification: {
+        date: 1700000003,
+        request: { identifier: 'n4', content: { data: { reminderId: 123 } }, trigger: null },
+      },
+    });
+    mockNotificationResponseListener?.({
+      actionIdentifier: 'expo.modules.notifications.actions.DEFAULT',
+      notification: {
+        date: 1700000004,
+        request: { identifier: 'n5', content: { data: {} }, trigger: null },
+      },
+    });
+    expect(onReminderTap).not.toHaveBeenCalled();
+
+    mockNotificationResponseListener?.({
+      actionIdentifier: 'expo.modules.notifications.actions.DEFAULT',
+      notification: {
+        date: 1700000005,
+        request: { identifier: 'n6', content: { data: { reminderId: 'rem-ok' } }, trigger: null },
+      },
+    });
+    expect(onReminderTap).toHaveBeenCalledTimes(1);
+    expect(onReminderTap).toHaveBeenCalledWith('rem-ok', { isInitial: false });
   });
 });

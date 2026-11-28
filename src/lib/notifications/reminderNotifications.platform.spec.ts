@@ -96,3 +96,14 @@ test('notification cancellation surfaces native failures', () => {
     /throw error/,
   ]);
 });
+
+test('notification response subscription reads default taps and prevents cold-start duplicate firing', () => {
+  assertSourceIncludes(source, [
+    /subscribeReminderNotificationResponses/,
+    /extractReminderIdFromNotificationResponse/,
+    /Notifications\.DEFAULT_ACTION_IDENTIFIER/,
+    /Notifications\.addNotificationResponseReceivedListener/,
+    /Notifications\.getLastNotificationResponse/,
+    /Notifications\.clearLastNotificationResponse/,
+  ]);
+});
