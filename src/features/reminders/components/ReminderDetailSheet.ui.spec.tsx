@@ -256,6 +256,49 @@ describe('ReminderDetailSheet schedule editing', () => {
     });
   });
 
+  it('discards the previous reminder draft when the detail switches to a different reminder', async () => {
+    const firstReminder = makeReminder();
+    const nextReminder = makeReminder({
+      id: 'reminder-2',
+      title: '図書館へ行く',
+      targetAt: new Date(2030, 4, 16, 11, 0).toISOString(),
+      status: 'active',
+    });
+    const props = {
+      onClose: jest.fn(),
+      onDelete: jest.fn(),
+      onUpdateTitle: jest.fn(),
+      onUpdateSchedule: jest.fn().mockResolvedValue({
+        reminder: nextReminder,
+        notification: { status: 'scheduled' },
+      }),
+    };
+    const view = await render(<ReminderDetailSheet {...props} reminder={firstReminder} />);
+
+    await fireEvent.press(view.getByLabelText('予定日時を編集'));
+    await fireEvent.press(view.getByLabelText('日付を変更'));
+    await fireEvent(
+      view.getByTestId('date-time-picker'),
+      'change',
+      { type: 'set' },
+      new Date(2030, 4, 15, 12),
+    );
+    await view.rerender(<ReminderDetailSheet {...props} reminder={{ ...firstReminder }} />);
+    expect(view.getByLabelText('日時変更を完了')).toBeOnTheScreen();
+
+    await view.rerender(<ReminderDetailSheet {...props} reminder={nextReminder} />);
+    expect(view.queryByLabelText('日時変更を完了')).toBeNull();
+    expect(props.onUpdateSchedule).not.toHaveBeenCalled();
+
+    await fireEvent.press(view.getByLabelText('予定日時を編集'));
+    await fireEvent.press(view.getByLabelText('日時変更を完了'));
+    expect(props.onUpdateSchedule).toHaveBeenCalledTimes(1);
+    expect(props.onUpdateSchedule).toHaveBeenCalledWith(
+      nextReminder,
+      expect.objectContaining({ targetDate: '2030-05-16', targetTime: '11:00' }),
+    );
+  });
+
   it('forwards settings previousNotifyTime to the schedule modal for expired reminders', async () => {
     const reminder = makeReminder();
     const view = await render(

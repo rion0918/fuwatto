@@ -203,7 +203,8 @@ export function ReminderDetailSheet({
   const [isTitleEditing, setIsTitleEditing] = useState(false);
   const [isTitleSaving, setIsTitleSaving] = useState(false);
   const [titleNotice, setTitleNotice] = useState<string | null>(null);
-  const [isScheduleEditorOpen, setIsScheduleEditorOpen] = useState(false);
+  const [scheduleEditorReminderId, setScheduleEditorReminderId] = useState<string | null>(null);
+  const isScheduleEditorOpen = reminder !== null && scheduleEditorReminderId === reminder.id;
   const [isScheduleSaving, setIsScheduleSaving] = useState(false);
   const [isOpeningProPaywall, setIsOpeningProPaywall] = useState(false);
   const [scheduleNotice, setScheduleNotice] = useState<string | null>(null);
@@ -237,7 +238,7 @@ export function ReminderDetailSheet({
 
   const discardScheduleEdit = useCallback(() => {
     scheduleEditSessionRef.current += 1;
-    setIsScheduleEditorOpen(false);
+    setScheduleEditorReminderId(null);
     setIsScheduleSaving(false);
     setIsOpeningProPaywall(false);
     setScheduleNotice(null);
@@ -252,6 +253,11 @@ export function ReminderDetailSheet({
   );
 
   useEffect(() => {
+    const displayedReminderId = displayedReminderIdRef.current;
+    if (displayedReminderId !== null && displayedReminderId !== reminder?.id) {
+      discardScheduleEdit();
+    }
+
     if (!reminder) {
       if (isPresentedRef.current) {
         closingReminderIdRef.current = displayedReminderIdRef.current;
@@ -273,7 +279,7 @@ export function ReminderDetailSheet({
       isPresentedRef.current = true;
       sheetRef.current?.present();
     }
-  }, [reminder]);
+  }, [discardScheduleEdit, reminder]);
 
   const handleDismiss = useCallback(() => {
     const closedReminderId = closingReminderIdRef.current ?? displayedReminderIdRef.current;
@@ -423,7 +429,7 @@ export function ReminderDetailSheet({
 
     setScheduleNotice(null);
     setScheduleEditorError(null);
-    setIsScheduleEditorOpen(true);
+    setScheduleEditorReminderId(reminder.id);
   }, [isOpeningProPaywall, isScheduleSaving, isTitleEditing, isTitleSaving, reminder]);
 
   const handleCloseScheduleEditor = useCallback(() => {
@@ -431,7 +437,7 @@ export function ReminderDetailSheet({
       return;
     }
 
-    setIsScheduleEditorOpen(false);
+    setScheduleEditorReminderId(null);
     setScheduleEditorError(null);
   }, [isOpeningProPaywall, isScheduleSaving]);
 
@@ -441,7 +447,13 @@ export function ReminderDetailSheet({
 
   const handleScheduleConfirm = useCallback(
     async (input: UpdateReminderScheduleInput) => {
-      if (!reminder || isScheduleSaving || isOpeningProPaywall) {
+      if (
+        !reminder ||
+        !isScheduleEditorOpen ||
+        latestReminderIdRef.current !== reminder.id ||
+        isScheduleSaving ||
+        isOpeningProPaywall
+      ) {
         return;
       }
 
@@ -457,7 +469,7 @@ export function ReminderDetailSheet({
           return;
         }
 
-        setIsScheduleEditorOpen(false);
+        setScheduleEditorReminderId(null);
         setScheduleEditorError(null);
         if (
           result.notification.status === 'not-scheduled' &&
@@ -482,7 +494,7 @@ export function ReminderDetailSheet({
         }
       }
     },
-    [isOpeningProPaywall, isScheduleSaving, onUpdateSchedule, reminder],
+    [isOpeningProPaywall, isScheduleEditorOpen, isScheduleSaving, onUpdateSchedule, reminder],
   );
 
   const handleOpenScheduleProPaywall = useCallback(async () => {

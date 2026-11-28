@@ -808,6 +808,64 @@ describe('HomeScreen first-run raise-to-speak onboarding', () => {
     });
   });
 
+  it.each(['active', 'expired'] as const)(
+    'keeps the notification target open when deletion of a different %s reminder completes',
+    async (status) => {
+      mockSettingsState = makeSettings({
+        raiseToSpeakOnboardingCompleted: true,
+        notificationPermissionIntroSeen: true,
+      });
+      const notifiedReminder: Reminder = {
+        id: 'rem-notified',
+        title: '通知で開く予定',
+        allDay: false,
+        targetAt: '2035-05-13T10:00:00.000Z',
+        previousNotifyAt: '2035-05-12T20:00:00.000Z',
+        targetNotifyAt: '2035-05-13T10:00:00.000Z',
+        expiresAt: '2035-05-13T10:00:00.000Z',
+        previousNotificationId: null,
+        targetNotificationId: null,
+        status: 'active',
+        createdAt: '',
+        updatedAt: '',
+      };
+      const deletedReminder: Reminder = {
+        ...notifiedReminder,
+        id: 'rem-deleting',
+        title: '削除する予定',
+        status,
+        expiresAt: status === 'expired' ? '2000-01-01T10:00:00.000Z' : notifiedReminder.expiresAt,
+      };
+      mockReminders = [deletedReminder, notifiedReminder];
+      mockRouteParams = { action: 'view', id: deletedReminder.id, intent: 'notif-before-delete' };
+      const view = await render(<HomeScreen />);
+      expect(view.getByTestId('detail-open')).toHaveTextContent(deletedReminder.id);
+
+      let completeDelete!: (deleted: boolean) => void;
+      mockDeleteReminder.mockReturnValueOnce(
+        new Promise<boolean>((resolve) => {
+          completeDelete = resolve;
+        }),
+      );
+      let deletion: Promise<void> | undefined;
+      await act(async () => {
+        deletion = mockDetailSheetOnDelete?.(deletedReminder);
+      });
+      expect(mockDeleteReminder).toHaveBeenCalledTimes(1);
+
+      mockRouteParams = { action: 'view', id: notifiedReminder.id, intent: 'notif-during-delete' };
+      await view.rerender(<HomeScreen />);
+      expect(view.getByTestId('detail-open')).toHaveTextContent(notifiedReminder.id);
+
+      await act(async () => {
+        mockBoardOnDeleteMotionComplete?.(deletedReminder.id, 'bursting');
+        completeDelete(true);
+        await deletion;
+      });
+      expect(view.getByTestId('detail-open')).toHaveTextContent(notifiedReminder.id);
+    },
+  );
+
   it('opens an expired reminder detail sheet from a view intent after onboarding closes', async () => {
     const expiredReminder: Reminder = {
       id: 'rem-past-notif',

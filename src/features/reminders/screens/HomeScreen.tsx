@@ -816,7 +816,7 @@ export function HomeScreen() {
           const deleted = await deleteReminder(reminder.id);
           if (!deleted) throw new Error('Reminder was not found');
           analytics.captureReminderDeleted({ surface: 'home', count: 1 });
-          setSelectedReminderId(null);
+          setSelectedReminderId((current) => (current === reminder.id ? null : current));
           return;
         }
         setDeleteMotion({ reminderId: reminder.id, phase: 'bursting' });
@@ -850,7 +850,7 @@ export function HomeScreen() {
         }
 
         analytics.captureReminderDeleted({ surface: 'home', count: 1 });
-        setSelectedReminderId(null);
+        setSelectedReminderId((current) => (current === reminder.id ? null : current));
         removeReminder(reminder.id);
         setDeleteMotion(null);
         void refresh({ silent: true });
