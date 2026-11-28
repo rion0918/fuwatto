@@ -124,6 +124,7 @@ export function ReminderScheduleEditorModal({
   }, [reminder, timePresets, visible]);
 
   const handleDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
+    if (isBusy) return;
     if (event.type === 'dismissed') {
       setActivePicker(null);
       return;
@@ -145,6 +146,7 @@ export function ReminderScheduleEditorModal({
   };
 
   const handleTimeChange = (event: DateTimePickerEvent, selectedTime?: Date) => {
+    if (isBusy) return;
     if (event.type === 'dismissed') {
       setActivePicker(null);
       return;
@@ -159,6 +161,7 @@ export function ReminderScheduleEditorModal({
   };
 
   const handleAllDayChange = (nextAllDay: boolean) => {
+    if (isBusy) return;
     onClearSaveError?.();
     if (nextAllDay) {
       setActivePicker((current) => (current === 'time' ? null : current));
@@ -183,6 +186,7 @@ export function ReminderScheduleEditorModal({
         is24Hour={activePicker === 'time'}
         locale="ja-JP"
         themeVariant="light"
+        disabled={isBusy}
         onChange={activePicker === 'date' ? handleDateChange : handleTimeChange}
       />
     );
@@ -190,7 +194,7 @@ export function ReminderScheduleEditorModal({
     if (Platform.OS === 'android') return picker;
 
     return (
-      <View style={styles.pickerSurface}>
+      <View pointerEvents={isBusy ? 'none' : 'auto'} style={styles.pickerSurface}>
         <View style={styles.inlinePicker}>{picker}</View>
       </View>
     );
@@ -338,13 +342,15 @@ export function ReminderScheduleEditorModal({
                 ) : null}
 
                 {saveError ? (
-                  <View accessible accessibilityRole="alert" style={styles.saveErrorCard}>
-                    <Text style={styles.saveErrorTitle}>{saveError.message}</Text>
-                    {saveError.isActiveLimitReached ? (
-                      <Text style={styles.saveErrorDescription}>
-                        Pro版ふわっと。なら、忘れたくないことを無制限に残せます。
-                      </Text>
-                    ) : null}
+                  <View style={styles.saveErrorCard}>
+                    <View accessible accessibilityRole="alert" style={styles.saveErrorMessageGroup}>
+                      <Text style={styles.saveErrorTitle}>{saveError.message}</Text>
+                      {saveError.isActiveLimitReached ? (
+                        <Text style={styles.saveErrorDescription}>
+                          Pro版ふわっと。なら、忘れたくないことを無制限に残せます。
+                        </Text>
+                      ) : null}
+                    </View>
                     {saveError.isActiveLimitReached && onOpenProPaywall ? (
                       <Pressable
                         cssInterop={false}
@@ -550,6 +556,9 @@ const styles = StyleSheet.create({
     padding: 14,
     borderRadius: 18,
     backgroundColor: palette.dangerSoft,
+    gap: 8,
+  },
+  saveErrorMessageGroup: {
     gap: 8,
   },
   saveErrorTitle: {
