@@ -5,6 +5,10 @@ import { ActiveReminderLimitReachedError } from '../application/reminderUseCases
 import type { Reminder } from '../domain/reminder';
 import { ReminderDetailSheet } from './ReminderDetailSheet';
 
+const mockPresentDetail = jest.fn();
+const mockDismissDetail = jest.fn();
+let mockOnDetailDismiss: (() => void) | undefined;
+
 jest.mock('react-native', () => {
   const native = jest.requireActual<typeof import('react-native')>('react-native');
   const React = jest.requireActual<typeof import('react')>('react');
@@ -59,10 +63,14 @@ jest.mock('@gorhom/bottom-sheet', () => {
   return {
     BottomSheetBackdrop: View,
     BottomSheetModal: React.forwardRef(function MockBottomSheetModal(
-      { children }: { children: ReactNode },
+      { children, onDismiss }: { children: ReactNode; onDismiss: () => void },
       ref,
     ) {
-      React.useImperativeHandle(ref, () => ({ present: jest.fn(), dismiss: jest.fn() }));
+      mockOnDetailDismiss = onDismiss;
+      React.useImperativeHandle(ref, () => ({
+        present: mockPresentDetail,
+        dismiss: mockDismissDetail,
+      }));
       return React.createElement(View, null, children);
     }),
     BottomSheetScrollView: (props: ComponentProps<typeof ScrollView>) =>
@@ -90,6 +98,81 @@ function makeReminder(overrides: Partial<Reminder> = {}): Reminder {
     ...overrides,
   };
 }
+
+describe('ReminderDetailSheet dismissal', () => {
+  beforeEach(() => {
+    mockPresentDetail.mockClear();
+    mockDismissDetail.mockClear();
+    mockOnDetailDismiss = undefined;
+  });
+
+  it('presents the next reminder when it is selected between delete and onDismiss', async () => {
+    const firstReminder = makeReminder({ status: 'active' });
+    const nextReminder = makeReminder({ id: 'reminder-2', title: '図書館へ行く' });
+    let completeDelete!: () => void;
+    const deletion = new Promise<void>((resolve) => {
+      completeDelete = resolve;
+    });
+    const props = {
+      onClose: jest.fn(),
+      onDelete: jest.fn().mockReturnValue(deletion),
+      onUpdateTitle: jest.fn(),
+      onUpdateSchedule: jest.fn(),
+    };
+    const view = await render(<ReminderDetailSheet {...props} reminder={firstReminder} />);
+    expect(mockPresentDetail).toHaveBeenCalledTimes(1);
+
+    await fireEvent.press(view.getByLabelText('このシャボン玉を削除する'));
+    expect(mockDismissDetail).toHaveBeenCalledTimes(1);
+    expect(props.onDelete).not.toHaveBeenCalled();
+
+    await view.rerender(<ReminderDetailSheet {...props} reminder={nextReminder} />);
+    expect(mockPresentDetail).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      mockOnDetailDismiss?.();
+    });
+    expect(props.onClose).toHaveBeenCalledWith(firstReminder.id);
+    expect(props.onDelete).toHaveBeenCalledTimes(1);
+    expect(props.onDelete).toHaveBeenCalledWith(firstReminder);
+    expect(mockPresentDetail).toHaveBeenCalledTimes(2);
+
+    await act(async () => {
+      completeDelete();
+      await deletion;
+    });
+    expect(view.getByText(nextReminder.title)).toBeOnTheScreen();
+    expect(mockDismissDetail).toHaveBeenCalledTimes(1);
+    expect(mockPresentDetail).toHaveBeenCalledTimes(2);
+  });
+
+  it('deletes the current reminder once and leaves the sheet closed when the selection is unchanged', async () => {
+    const reminder = makeReminder();
+    const onClose = jest.fn();
+    const onDelete = jest.fn().mockResolvedValue(undefined);
+    const view = await render(
+      <ReminderDetailSheet
+        reminder={reminder}
+        onClose={onClose}
+        onDelete={onDelete}
+        onUpdateTitle={jest.fn()}
+        onUpdateSchedule={jest.fn()}
+      />,
+    );
+
+    await fireEvent.press(view.getByLabelText('このシャボン玉を削除する'));
+    expect(mockDismissDetail).toHaveBeenCalledTimes(1);
+    expect(onDelete).not.toHaveBeenCalled();
+
+    await act(async () => {
+      mockOnDetailDismiss?.();
+    });
+    expect(onClose).toHaveBeenCalledWith(reminder.id);
+    expect(onDelete).toHaveBeenCalledTimes(1);
+    expect(onDelete).toHaveBeenCalledWith(reminder);
+    expect(mockPresentDetail).toHaveBeenCalledTimes(1);
+  });
+});
 
 describe('ReminderDetailSheet schedule editing', () => {
   beforeEach(() => {
@@ -254,6 +337,49 @@ describe('ReminderDetailSheet schedule editing', () => {
       expect(view.queryByLabelText('日時変更を完了')).toBeNull();
       expect(view.queryByText('日時を保存できませんでした')).toBeNull();
     });
+  });
+
+  it('discards the previous reminder draft when the detail switches to a different reminder', async () => {
+    const firstReminder = makeReminder();
+    const nextReminder = makeReminder({
+      id: 'reminder-2',
+      title: '図書館へ行く',
+      targetAt: new Date(2030, 4, 16, 11, 0).toISOString(),
+      status: 'active',
+    });
+    const props = {
+      onClose: jest.fn(),
+      onDelete: jest.fn(),
+      onUpdateTitle: jest.fn(),
+      onUpdateSchedule: jest.fn().mockResolvedValue({
+        reminder: nextReminder,
+        notification: { status: 'scheduled' },
+      }),
+    };
+    const view = await render(<ReminderDetailSheet {...props} reminder={firstReminder} />);
+
+    await fireEvent.press(view.getByLabelText('予定日時を編集'));
+    await fireEvent.press(view.getByLabelText('日付を変更'));
+    await fireEvent(
+      view.getByTestId('date-time-picker'),
+      'change',
+      { type: 'set' },
+      new Date(2030, 4, 15, 12),
+    );
+    await view.rerender(<ReminderDetailSheet {...props} reminder={{ ...firstReminder }} />);
+    expect(view.getByLabelText('日時変更を完了')).toBeOnTheScreen();
+
+    await view.rerender(<ReminderDetailSheet {...props} reminder={nextReminder} />);
+    expect(view.queryByLabelText('日時変更を完了')).toBeNull();
+    expect(props.onUpdateSchedule).not.toHaveBeenCalled();
+
+    await fireEvent.press(view.getByLabelText('予定日時を編集'));
+    await fireEvent.press(view.getByLabelText('日時変更を完了'));
+    expect(props.onUpdateSchedule).toHaveBeenCalledTimes(1);
+    expect(props.onUpdateSchedule).toHaveBeenCalledWith(
+      nextReminder,
+      expect.objectContaining({ targetDate: '2030-05-16', targetTime: '11:00' }),
+    );
   });
 
   it('forwards settings previousNotifyTime to the schedule modal for expired reminders', async () => {

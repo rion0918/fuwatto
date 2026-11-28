@@ -1,7 +1,10 @@
 import { act, render, waitFor } from '@testing-library/react-native';
+import { Platform } from 'react-native';
 
 const mockReplace = jest.fn();
-const mockRouter = { replace: mockReplace };
+const mockSetParams = jest.fn();
+const mockRouter = { replace: mockReplace, setParams: mockSetParams };
+let mockPathname: string;
 let mockNavigation: { key: string } | undefined;
 let mockReceiveUrl: (event: { url: string }) => void;
 let mockInitialUrl: Promise<string | null>;
@@ -14,7 +17,12 @@ jest.mock('expo-router', () => {
   Stack.Screen = function Screen() {
     return null;
   };
-  return { Stack, useRouter: () => mockRouter, useRootNavigationState: () => mockNavigation };
+  return {
+    Stack,
+    useRouter: () => mockRouter,
+    useRootNavigationState: () => mockNavigation,
+    usePathname: () => mockPathname,
+  };
 });
 jest.mock('expo-linking', () => ({
   addEventListener: (_event: string, callback: typeof mockReceiveUrl) => {
@@ -52,9 +60,34 @@ const RootLayout = require('../app/_layout').default;
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockPathname = '/settings';
   mockNavigation = undefined;
   mockInitialUrl = Promise.resolve(null);
   mockReceiveNotificationUrl = null;
+});
+
+test('Android delivers repeated notification taps to the mounted home screen', async () => {
+  const platform = jest.replaceProperty(Platform, 'OS', 'android');
+  try {
+    mockPathname = '/';
+    mockNavigation = { key: 'root' };
+    await render(<RootLayout />);
+
+    await act(async () => {
+      mockReceiveNotificationUrl?.('popreminder://?action=view&id=notif-1', { isInitial: false });
+    });
+    await act(async () => {
+      mockReceiveNotificationUrl?.('popreminder://?action=view&id=notif-1', { isInitial: false });
+    });
+
+    expect(mockReplace).not.toHaveBeenCalled();
+    expect(mockSetParams.mock.calls).toEqual([
+      [{ action: 'view', id: 'notif-1', intent: '1' }],
+      [{ action: 'view', id: 'notif-1', intent: '2' }],
+    ]);
+  } finally {
+    platform.restore();
+  }
 });
 
 test('initial tap waits for both bootstrap and mounted navigator; later identical taps are delivered', async () => {

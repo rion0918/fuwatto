@@ -12,6 +12,9 @@ overrides:
   '@storybook/react-native-ui-common': 10.4.2
 
 patchedDependencies:
+  expo-notifications@0.32.17:
+    hash: 71706c0094783f1fa496f95fb1854ead316d9524a5330284ab3eeb8a256575c5
+    path: patches/expo-notifications@0.32.17.patch
   react-native-android-widget@0.20.3:
     hash: 0c97a3ba4b78bb341cf51309c6a75397f848f26aabdabc9aea564cc786fa608c
     path: patches/react-native-android-widget@0.20.3.patch
@@ -82,7 +85,7 @@ importers:
         version: 17.0.9(expo@54.0.37)(react@19.1.0)
       expo-notifications:
         specifier: ~0.32.17
-        version: 0.32.17(expo@54.0.37)(react-native@0.81.5(@babel/core@7.29.7)(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)(typescript@5.9.3)
+        version: 0.32.17(patch_hash=71706c0094783f1fa496f95fb1854ead316d9524a5330284ab3eeb8a256575c5)(expo@54.0.37)(react-native@0.81.5(@babel/core@7.29.7)(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)(typescript@5.9.3)
       expo-router:
         specifier: ~6.0.24
         version: 6.0.24(7d02ffc886f961d993bc5cb747592431)
@@ -10927,7 +10930,7 @@ snapshots:
       react: 19.1.0
       react-native: 0.81.5(@babel/core@7.29.7)(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.1.17)(react@19.1.0)
 
-  expo-notifications@0.32.17(expo@54.0.37)(react-native@0.81.5(@babel/core@7.29.7)(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)(typescript@5.9.3):
+  expo-notifications@0.32.17(patch_hash=71706c0094783f1fa496f95fb1854ead316d9524a5330284ab3eeb8a256575c5)(expo@54.0.37)(react-native@0.81.5(@babel/core@7.29.7)(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)(typescript@5.9.3):
     dependencies:
       '@expo/image-utils': 0.8.14(typescript@5.9.3)
       '@ide/backoff': 1.0.0

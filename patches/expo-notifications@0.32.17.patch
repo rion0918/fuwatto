@@ -1,0 +1,37 @@
+diff --git a/android/src/main/java/expo/modules/notifications/notifications/model/NotificationRequest.java b/android/src/main/java/expo/modules/notifications/notifications/model/NotificationRequest.java
+index 79f5aa1693c4ed48462781b4ca20ff85f65ae500..060e04c0ba7e302ddf5a9d009e45b07a50f8d5af 100644
+--- a/android/src/main/java/expo/modules/notifications/notifications/model/NotificationRequest.java
++++ b/android/src/main/java/expo/modules/notifications/notifications/model/NotificationRequest.java
+@@ -15,2 +15,5 @@ import expo.modules.notifications.notifications.interfaces.NotificationTrigger;
+ public class NotificationRequest implements Parcelable, Serializable {
++  // Retain the UID of requests persisted before R8 was enabled.
++  private static final long serialVersionUID = 2436814163774274309L;
++
+   private String mIdentifier;
+diff --git a/android/src/main/java/expo/modules/notifications/notifications/triggers/NotificationTriggers.kt b/android/src/main/java/expo/modules/notifications/notifications/triggers/NotificationTriggers.kt
+index 956ccc6e9014e333d669720f5466844ee2db5982..1852bc3d54b91e3484e190fda771ac810719d4fd 100644
+--- a/android/src/main/java/expo/modules/notifications/notifications/triggers/NotificationTriggers.kt
++++ b/android/src/main/java/expo/modules/notifications/notifications/triggers/NotificationTriggers.kt
+@@ -24,2 +24,7 @@ open class ChannelAwareTrigger(open val channelId: String?) :
+   }
++
++  private companion object {
++    // Retain the UID of triggers persisted before R8 was enabled.
++    private const val serialVersionUID = -4194210477031268790L
++  }
+ }
+diff --git a/expo-module.config.json b/expo-module.config.json
+index 4ca0a4205c4421f0d400b335166daf1a8daa2945..402bad977d42486dda97d655696a329d313a0a58 100644
+--- a/expo-module.config.json
++++ b/expo-module.config.json
+@@ -31,9 +31,3 @@
+       "expo.modules.notifications.tokens.PushTokenModule"
+-    ],
+-    "publication": {
+-      "groupId": "host.exp.exponent",
+-      "artifactId": "expo.modules.notifications",
+-      "version": "0.32.17",
+-      "repository": "local-maven-repo"
+-    }
++    ]
+   }
