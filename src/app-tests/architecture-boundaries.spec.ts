@@ -267,3 +267,14 @@ test('RevenueCat SDK imports stay inside the purchase infrastructure adapter', (
     assert.match(path, /^features\/purchases\/infrastructure\//);
   }
 });
+
+test('Expo Notifications SDK imports stay inside src/lib/notifications', () => {
+  const notificationPaths = [...importGraph.entries()]
+    .filter(([, node]) => node.externalModules.includes('expo-notifications'))
+    .map(([path]) => path);
+
+  assert.ok(notificationPaths.length > 0);
+  for (const path of notificationPaths) {
+    assert.match(path, /^lib\/notifications\//);
+  }
+});

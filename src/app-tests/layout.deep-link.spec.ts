@@ -51,3 +51,14 @@ test('widget intents wait for the mounted navigator before being published', () 
     excludes: [/intentBufferRef\.current\.consume\(\)/, /publishIntent\(pendingIntent\)/],
   });
 });
+
+test('root layout subscribes to notification taps through bootstrap and shares the deep link receiver', () => {
+  assertSourceContract(source, {
+    includes: [
+      /import \{ subscribeReminderNotificationIntent \} from '\.\.\/bootstrap\/reminderNotificationIntent';/,
+      /subscribeReminderNotificationIntent\(/,
+      /receiveUrl\(url\)/,
+    ],
+    excludes: [/expo-notifications/, /\.\.\/lib\/notifications\//],
+  });
+});

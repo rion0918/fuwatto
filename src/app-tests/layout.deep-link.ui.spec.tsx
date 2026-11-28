@@ -5,6 +5,8 @@ const mockRouter = { replace: mockReplace };
 let mockNavigation: { key: string } | undefined;
 let mockReceiveUrl: (event: { url: string }) => void;
 let mockInitialUrl: Promise<string | null>;
+let mockReceiveNotificationUrl: ((url: string, meta: { isInitial: boolean }) => void) | null = null;
+const mockUnsubscribeNotifications = jest.fn();
 const mockPrepare = jest.fn(async () => {});
 jest.mock('../../global.css', () => ({}));
 jest.mock('expo-router', () => {
@@ -20,6 +22,14 @@ jest.mock('expo-linking', () => ({
     return { remove: jest.fn() };
   },
   getInitialURL: () => mockInitialUrl,
+}));
+jest.mock('../bootstrap/reminderNotificationIntent', () => ({
+  subscribeReminderNotificationIntent: (
+    callback: (url: string, meta: { isInitial: boolean }) => void,
+  ) => {
+    mockReceiveNotificationUrl = callback;
+    return mockUnsubscribeNotifications;
+  },
 }));
 jest.mock('../bootstrap/appInitialization', () => ({
   configureAppRuntime: async () => {},
@@ -44,6 +54,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockNavigation = undefined;
   mockInitialUrl = Promise.resolve(null);
+  mockReceiveNotificationUrl = null;
 });
 
 test('initial tap waits for both bootstrap and mounted navigator; later identical taps are delivered', async () => {
@@ -86,4 +97,61 @@ test('a late initial URL does not overwrite a newer widget tap', async () => {
     pathname: '/',
     params: { action: 'view', id: 'new', intent: '1' },
   });
+});
+
+test('cold-start notification tap waits for bootstrap and navigator, and later warm taps re-deliver', async () => {
+  let ready!: () => void;
+  mockPrepare.mockImplementationOnce(
+    () =>
+      new Promise<void>((resolve) => {
+        ready = resolve;
+      }),
+  );
+
+  const view = await render(<RootLayout />);
+  await act(async () => {
+    mockReceiveNotificationUrl?.('popreminder://?action=view&id=notif-1', { isInitial: true });
+  });
+
+  await act(async () => ready());
+  expect(mockReplace).not.toHaveBeenCalled();
+
+  mockNavigation = { key: 'root' };
+  await view.rerender(<RootLayout />);
+  await waitFor(() => expect(mockReplace).toHaveBeenCalledTimes(1));
+  expect(mockReplace).toHaveBeenLastCalledWith({
+    pathname: '/',
+    params: { action: 'view', id: 'notif-1', intent: '1' },
+  });
+
+  await act(async () => {
+    mockReceiveNotificationUrl?.('popreminder://?action=view&id=notif-1', { isInitial: false });
+  });
+  expect(mockReplace).toHaveBeenLastCalledWith({
+    pathname: '/',
+    params: { action: 'view', id: 'notif-1', intent: '2' },
+  });
+});
+
+test('warm notification tap prevents a late initial URL from overwriting it and unsubscribes on unmount', async () => {
+  let initial!: (url: string) => void;
+  mockInitialUrl = new Promise((resolve) => {
+    initial = resolve;
+  });
+  mockNavigation = { key: 'root' };
+  const view = await render(<RootLayout />);
+
+  await act(async () => {
+    mockReceiveNotificationUrl?.('popreminder://?action=view&id=notif-warm', { isInitial: false });
+  });
+  await act(async () => initial('popreminder://?action=view&id=old-widget'));
+
+  expect(mockReplace).toHaveBeenCalledTimes(1);
+  expect(mockReplace).toHaveBeenLastCalledWith({
+    pathname: '/',
+    params: { action: 'view', id: 'notif-warm', intent: '1' },
+  });
+
+  await view.unmount();
+  expect(mockUnsubscribeNotifications).toHaveBeenCalledTimes(1);
 });

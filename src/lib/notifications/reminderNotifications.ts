@@ -416,3 +416,97 @@ export const reminderNotificationGateway: ReminderNotificationGateway = {
   cancel: cancelReminderNotifications,
   cancelOne: cancelScheduledReminderNotification,
 };
+
+export type ReminderNotificationTapMeta = {
+  isInitial: boolean;
+};
+
+export function extractReminderIdFromNotificationResponse(
+  response: Notifications.NotificationResponse | null | undefined,
+): string | null {
+  if (!response || response.actionIdentifier !== Notifications.DEFAULT_ACTION_IDENTIFIER) {
+    return null;
+  }
+
+  const data = response.notification?.request?.content?.data;
+  if (!data || typeof data !== 'object' || !('reminderId' in data)) {
+    return null;
+  }
+
+  const reminderId = data.reminderId;
+  return typeof reminderId === 'string' && reminderId.trim().length > 0 ? reminderId : null;
+}
+
+function getNotificationResponseKey(response: Notifications.NotificationResponse): string | null {
+  const identifier = response.notification?.request?.identifier;
+  if (typeof identifier !== 'string' || identifier.length === 0) {
+    return null;
+  }
+
+  const date = response.notification?.date;
+  return `${identifier}:${response.actionIdentifier}:${typeof date === 'number' ? date : ''}`;
+}
+
+function getLastNotificationResponseSafely(): Notifications.NotificationResponse | null {
+  if (typeof Notifications.getLastNotificationResponse !== 'function') {
+    return null;
+  }
+
+  try {
+    return Notifications.getLastNotificationResponse();
+  } catch {
+    return null;
+  }
+}
+
+function clearLastNotificationResponseSafely() {
+  if (typeof Notifications.clearLastNotificationResponse !== 'function') {
+    return;
+  }
+
+  try {
+    Notifications.clearLastNotificationResponse();
+  } catch {
+    // Ignore native emitter unavailability (e.g., unsupported runtime or web).
+  }
+}
+
+export function subscribeReminderNotificationResponses(
+  onReminderTap: (reminderId: string, meta: ReminderNotificationTapMeta) => void,
+): () => void {
+  let receivedLiveResponse = false;
+  let handledInitialResponseKey: string | null = null;
+
+  const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
+    receivedLiveResponse = true;
+    const reminderId = extractReminderIdFromNotificationResponse(response);
+    if (!reminderId) {
+      return;
+    }
+
+    const responseKey = getNotificationResponseKey(response);
+    if (responseKey !== null && responseKey === handledInitialResponseKey) {
+      handledInitialResponseKey = null;
+      clearLastNotificationResponseSafely();
+      return;
+    }
+
+    handledInitialResponseKey = null;
+    clearLastNotificationResponseSafely();
+    onReminderTap(reminderId, { isInitial: false });
+  });
+
+  if (!receivedLiveResponse) {
+    const initialResponse = getLastNotificationResponseSafely();
+    const reminderId = extractReminderIdFromNotificationResponse(initialResponse);
+    if (initialResponse && reminderId) {
+      handledInitialResponseKey = getNotificationResponseKey(initialResponse);
+      clearLastNotificationResponseSafely();
+      onReminderTap(reminderId, { isInitial: true });
+    }
+  }
+
+  return () => {
+    subscription.remove();
+  };
+}

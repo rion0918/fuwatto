@@ -1,5 +1,9 @@
 export type DeepLinkIntent = { action: 'add' | 'past' } | { action: 'view'; id: string };
 
+export function buildReminderViewDeepLinkUrl(reminderId: string): string {
+  return `popreminder://?action=view&id=${encodeURIComponent(reminderId)}`;
+}
+
 export function parseDeepLinkIntent(url: string): DeepLinkIntent | null {
   const queryStart = url.indexOf('?');
   if (queryStart < 0) return null;

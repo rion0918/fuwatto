@@ -807,4 +807,53 @@ describe('HomeScreen first-run raise-to-speak onboarding', () => {
       expect(mockRecordBubbleCompleted).toHaveBeenCalledTimes(1);
     });
   });
+
+  it('opens an expired reminder detail sheet from a view intent after onboarding closes', async () => {
+    const expiredReminder: Reminder = {
+      id: 'rem-past-notif',
+      title: '昨日の薬',
+      allDay: false,
+      targetAt: '2026-11-16T08:00:00.000Z',
+      previousNotifyAt: '2026-11-15T20:00:00.000Z',
+      targetNotifyAt: '2026-11-16T08:00:00.000Z',
+      expiresAt: '2026-11-16T08:00:00.000Z',
+      previousNotificationId: null,
+      targetNotificationId: null,
+      status: 'expired',
+      createdAt: '2026-11-15T10:00:00.000Z',
+      updatedAt: '2026-11-15T10:00:00.000Z',
+    };
+    mockReminders = [expiredReminder];
+    mockRouteParams = { action: 'view', id: 'rem-past-notif', intent: 'notif-past-1' };
+    const view = await render(<HomeScreen />);
+
+    expect(mockOpenedDetailReminderId).toBeNull();
+
+    await fireEvent.press(view.getByText('オフのままはじめる'));
+    await waitFor(() => {
+      expect(view.getByTestId('detail-open')).toHaveTextContent('rem-past-notif');
+    });
+  });
+
+  it('alerts once without 自動消滅 when a view intent targets a deleted reminder and does not re-fire on rerender', async () => {
+    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    mockSettingsState = makeSettings({ raiseToSpeakOnboardingCompleted: true });
+    mockReminders = [];
+    mockRouteParams = { action: 'view', id: 'rem-deleted', intent: 'notif-deleted-1' };
+
+    const view = await render(<HomeScreen />);
+    await waitFor(() => {
+      expect(alertSpy).toHaveBeenCalledTimes(1);
+    });
+    expect(alertSpy).toHaveBeenCalledWith(
+      'リマインダーが見つかりません',
+      'この予定はすでに削除されています。',
+    );
+    const alertMessage = alertSpy.mock.calls[0]?.[1];
+    expect(typeof alertMessage === 'string' && alertMessage.includes('自動消滅')).toBe(false);
+
+    await view.rerender(<HomeScreen />);
+    expect(alertSpy).toHaveBeenCalledTimes(1);
+    expect(mockOpenedDetailReminderId).toBeNull();
+  });
 });
