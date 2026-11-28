@@ -64,9 +64,18 @@ const quickAddPresetRows: { key: QuickAddPresetKey; label: string; icon: QuickAd
   { key: 'nightTargetTime', label: '夜', icon: 'moon-outline' },
 ];
 
+type LegalLink = {
+  label: string;
+  url: string;
+  accessibilityLabel: string;
+  accessibilityHint: string;
+  icon: ComponentProps<typeof Ionicons>['name'];
+};
+
 type LegalSection = {
   title: string;
   body: string;
+  links?: LegalLink[];
 };
 
 type LegalDocument = {
@@ -75,9 +84,17 @@ type LegalDocument = {
   sections: LegalSection[];
 };
 
+const supportContactLink: LegalLink = {
+  label: `メールでお問い合わせ（${supportContact}）`,
+  url: `mailto:${supportContact}`,
+  accessibilityLabel: `${supportContact} にメールで問い合わせる`,
+  accessibilityHint: 'メールアプリを起動します',
+  icon: 'mail-outline',
+};
+
 const privacyPolicyDocument: LegalDocument = {
   title: 'プライバシーポリシー',
-  updatedAt: '2026年11月17日',
+  updatedAt: '2026年11月28日',
   sections: [
     {
       title: '1. 基本方針',
@@ -85,7 +102,7 @@ const privacyPolicyDocument: LegalDocument = {
     },
     {
       title: '2. 端末内に保存する情報',
-      body: 'リマインダーの表示・編集・通知・整理のため、タイトル、日時、リマインダーID、通知ID、作成・更新日時、期限・状態を端末内に保存します。テーマ、時刻プリセット、音声入力、分析への同意などの設定も保存します。購入管理SDKの識別子・購入状態のキャッシュ、同意後の分析用識別子・未送信イベントも端末内に保存される場合があります。ログイン・アカウント作成機能や、開発者によるリマインダーの外部サーバー同期はありません。OSのバックアップ設定によっては、端末内のデータがバックアップの対象となり、復元される場合があります。バックアップの管理・削除はOSやバックアップサービスの設定から行ってください。',
+      body: 'リマインダーの表示・編集・通知・整理のため、タイトル、日時、リマインダーID、通知ID、作成・更新日時、期限・状態を端末内に保存します。テーマ、時刻プリセット、音声入力、分析への同意などの設定や、アプリ内ストアレビュー依頼の表示条件を判定するための状態（初回利用日時、完了操作の回数、依頼回数、前回の依頼日時）も端末内に保存します。購入管理SDKの識別子・購入状態のキャッシュ、同意後の分析用識別子・未送信イベントも端末内に保存される場合があります。ログイン・アカウント作成機能や、開発者によるリマインダーの外部サーバー同期はありません。OSのバックアップ設定によっては、端末内のデータがバックアップの対象となり、復元される場合があります。バックアップの管理・削除はOSやバックアップサービスの設定から行ってください。',
     },
     {
       title: '3. 通知権限とWidget',
@@ -93,11 +110,11 @@ const privacyPolicyDocument: LegalDocument = {
     },
     {
       title: '4. 音声入力とセンサーについて',
-      body: '音声入力にマイクを、「左右に傾けて音声入力」にマイクとモーション（加速度など）を利用します。通常のマイクボタンはユーザーが押した場合だけ動作します。「左右に傾けて音声入力」は初期状態でOFFであり、案内または設定画面から明示的に有効化した場合だけ、アプリを操作している間の傾きを検出します。設定画面から停止でき、マイクなどの権限は端末の設定から変更できます。音声認識はOS標準の音声認識機能（iOSのApple音声認識、AndroidのGoogle音声認識または端末内モデル）を利用して日本語を文字へ変換します。開発者が音声、録音、文字起こし、モーション値を保存、分析、収集することはありません。文字起こしからタイトルと日時の候補を端末内で読み取り、追加画面に反映します。ユーザーが認識結果と日時を確認して「追加」を押した場合に、リマインダーとして保存します。文字起こしを分析、外部送信することはありません。音声認識の精度向上のため、オンライン時はOSの音声認識サービス（AppleまたはGoogle）へ音声データが送信・処理される場合があります。また、Androidでは準備時にOSの認識用モデルのダウンロードが発生する場合があります。これらの通信および音声認識処理は各OSや音声認識サービスの提供者がそれぞれのプライバシーポリシーに従って処理します。オフライン時やOS認識が利用できないAndroid環境では、アプリに同梱した認識用モデル（Moonshine Tiny JA）が端末内で処理します。',
+      body: '「左右に傾けて音声入力」にマイクとモーション（加速度など）を利用します。「左右に傾けて音声入力」は初期状態でOFFであり、案内または設定画面から明示的に有効化した場合だけ、アプリを操作している間の傾きを検出して音声入力を開始します。設定画面から停止でき、マイクなどの権限は端末の設定から変更できます。音声認識はOS標準の音声認識機能（iOSのApple音声認識、AndroidのGoogle音声認識または端末内モデル）を利用して日本語を文字へ変換します。開発者が音声、録音、文字起こし、モーション値を保存、分析、収集することはありません。文字起こしからタイトルと日時の候補を端末内で読み取り、追加画面に反映します。ユーザーが認識結果と日時を確認して「追加」を押した場合に、リマインダーとして保存します。文字起こしを分析、外部送信することはありません。音声認識の精度向上のため、オンライン時はOSの音声認識サービス（AppleまたはGoogle）へ音声データが送信・処理される場合があります。また、Androidでは準備時にOSの認識用モデルのダウンロードが発生する場合があります。これらの通信および音声認識処理は各OSや音声認識サービスの提供者がそれぞれのプライバシーポリシーに従って処理します。オフライン時やOS認識が利用できないAndroid環境では、アプリに同梱した認識用モデル（Moonshine Tiny JA）が端末内で処理します。',
     },
     {
       title: '5. 匿名の利用状況について',
-      body: '品質改善のためPostHogの解析SDKを使用し、明示的な同意後に利用状況をPostHog の US Cloud（米国）へ送信します。初期状態は無効・未選択で、設定画面の「匿名の利用状況を共有」からいつでも停止・再開できます。共有しなくてもリマインダーの基本機能を利用できます。SDKが生成する匿名ID、イベントの発生時刻・識別子、SDK名・バージョン、アプリのバージョン・ビルド番号、Android／iOSなどのプラットフォーム、開発・本番ビルドの区分と、次の画面表示・操作結果を送信します。匿名IDは氏名やメールアドレスに紐付けませんが、同じアプリ利用のイベントを関連付けるための識別子です。対象は、ホーム・一覧・設定の画面表示、アプリの利用開始・再訪、追加画面を開いた経路・入力方法、保存操作・失敗・画面を閉じた結果、最初の保存までの所要時間、音声入力の開始・成功・失敗・キャンセルの結果、作成・編集・削除の成功、日付プリセットの種類、終日／時刻指定の区分、編集箇所、削除件数、通知予約の成否・理由、通知権限の状態・再確認可否、無料上限への到達経路、購入画面の表示要求・購入・復元・中断などの結果です。追加画面の一回の訪問を関連付けるために、一時的な匿名の訪問IDも送信します。PostHogへの分析データに、リマインダーのタイトル、リマインダーID、具体的な日付・時刻、設定値、価格、ストア取引ID、ディープリンクURLは送信しません。音声・録音・文字起こし・モーション値、端末モデル・OSのバージョン・ロケールも含めません。タッチ操作の自動収集、セッションリプレイ、クラッシュの自動収集、位置情報の推定、リモートFeature Flag、広告SDKは使用しません。通信先には接続に必要なIPアドレスが伝わります。アプリからIPアドレスを分析イベントの項目として追加せず、SDKの位置情報推定を無効にしています。',
+      body: '品質改善のためPostHogの解析SDKを使用し、明示的な同意後に利用状況をPostHog US Cloud（米国）へ送信します。初期状態は無効・未選択で、設定画面の「匿名の利用状況を共有」からいつでも停止・再開できます。共有しなくてもリマインダーの基本機能を利用できます。SDKが生成する匿名ID、イベントの発生時刻・識別子、SDK名・バージョン、アプリのバージョン・ビルド番号、Android／iOSなどのプラットフォーム、開発・本番ビルドの区分と、次の画面表示・操作結果を送信します。匿名IDは氏名やメールアドレスに紐付けませんが、同じアプリ利用のイベントを関連付けるための識別子です。対象は、ホーム・一覧・設定の画面表示、アプリの利用開始・再訪、追加画面を開いた経路・入力方法、保存操作・失敗・画面を閉じた結果、最初の保存までの所要時間、音声入力の開始・成功・失敗・キャンセルの結果、作成・編集・削除の成功、日付プリセットの種類、終日／時刻指定の区分、編集箇所、削除件数、通知予約の成否・理由、通知権限の状態・再確認可否、無料上限への到達経路、購入画面の表示要求・購入・復元・中断などの結果、アプリ内ストアレビュー依頼を呼び出したきっかけ・累計回数です。追加画面の一回の訪問を関連付けるために、一時的な匿名の訪問IDも送信します。PostHogへの分析データに、リマインダーのタイトル、リマインダーID、具体的な日付・時刻、設定値、価格、ストア取引ID、ディープリンクURLは送信しません。音声・録音・文字起こし・モーション値、端末モデル・OSのバージョン・ロケールも含めません。タッチ操作の自動収集、セッションリプレイ、クラッシュの自動収集、位置情報の推定、リモートFeature Flag、広告SDKは使用しません。通信先には接続に必要なIPアドレスが伝わります。アプリからIPアドレスを分析イベントの項目として追加せず、SDKの位置情報推定を無効にしています。',
     },
     {
       title: '6. 利用状況計測の停止と保持期間',
@@ -109,11 +126,41 @@ const privacyPolicyDocument: LegalDocument = {
     },
     {
       title: '8. データの削除',
-      body: 'リマインダーはアプリ内やAndroidのWidgetの削除操作で削除できます。予定日時を過ぎたリマインダーも、手動で削除するまで端末内に保持します。ホームとWidgetではこれからの予定と分けて表示し、「過ぎた予定」から見返したり日時を変更したりできます。AndroidのOS設定で本アプリのストレージを消去するか、アプリをアンインストールすると、端末内のデータはOSの仕様に従って削除されます。バックアップ上のデータは別途管理が必要で、復元時に戻る場合があります。開発者はリマインダーのコピーを保有していないため、失われたリマインダーを復元できません。分析データの削除は前記の保持期間に従います。購入記録や取引情報には、購入権利の維持と各サービスのポリシー、法令上の保存義務が適用されます。本アプリには独自のユーザーアカウントがないため、アカウント削除機能はありません。データの取り扱いに関する相談は末尾のメールアドレスへご連絡ください。',
+      body: 'リマインダーはアプリ内やAndroidのWidgetの削除操作で削除できます。予定日時を過ぎたリマインダーも、手動で削除するまで端末内に保持します。ホームとWidgetではこれからの予定と分けて表示し、「過ぎた予定」から見返したり日時を変更したりできます。アプリをアンインストールすると、端末内のデータは各OSの仕様に従って削除されます（AndroidではOS設定から本アプリのストレージを消去する方法でも削除でき、iOSでは「アプリを削除」で削除されます）。バックアップ上のデータは別途管理が必要で、復元時に戻る場合があります。開発者はリマインダーのコピーを保有していないため、失われたリマインダーを復元できません。分析データの削除は前記の保持期間に従います。購入記録や取引情報には、購入権利の維持と各サービスのポリシー、法令上の保存義務が適用されます。本アプリには独自のユーザーアカウントがないため、アカウント削除機能はありません。データの取り扱いに関する相談は末尾のメールアドレスへご連絡ください。',
     },
     {
       title: '9. 外部サービスと安全管理',
-      body: 'PostHogとRevenueCatは、上記の分析・購入管理を行うサービス提供者として利用します。これらの通信はHTTPSで暗号化します。端末内データはアプリの保存領域で管理し、OSのアクセス制御を利用します。問い合わせへの対応で受け取ったメールアドレス、問い合わせ内容、任意の添付情報は、返信・調査・対応記録のために必要な範囲・期間で取り扱います。PostHog の US Cloudのデータは米国で処理されます。RevenueCatやストア、OSのバックアップ・モデル配信、メールサービスでは、日本国外で処理される場合があります。各サービスの取り扱いは以下もご確認ください。PostHog: https://posthog.com/privacy RevenueCat: https://www.revenuecat.com/privacy Google: https://policies.google.com/privacy?hl=ja Apple: https://www.apple.com/legal/privacy/jp/',
+      body: 'PostHogとRevenueCatは、上記の分析・購入管理を行うサービス提供者として利用します。これらの通信はHTTPSで暗号化します。端末内データはアプリの保存領域で管理し、OSのアクセス制御を利用します。問い合わせへの対応で受け取ったメールアドレス、問い合わせ内容、任意の添付情報は、返信・調査・対応記録のために必要な範囲・期間で取り扱います。PostHog US Cloudのデータは米国で処理されます。RevenueCatやストア、OSのバックアップ・モデル配信、メールサービスでは、日本国外で処理される場合があります。各サービスの取り扱いは以下もご確認ください。',
+      links: [
+        {
+          label: 'PostHogのプライバシーポリシー',
+          url: 'https://posthog.com/privacy',
+          accessibilityLabel: 'PostHogのプライバシーポリシーをブラウザで開く',
+          accessibilityHint: '外部ブラウザで開きます',
+          icon: 'open-outline',
+        },
+        {
+          label: 'RevenueCatのプライバシーポリシー',
+          url: 'https://www.revenuecat.com/privacy',
+          accessibilityLabel: 'RevenueCatのプライバシーポリシーをブラウザで開く',
+          accessibilityHint: '外部ブラウザで開きます',
+          icon: 'open-outline',
+        },
+        {
+          label: 'Googleのプライバシーポリシー',
+          url: 'https://policies.google.com/privacy?hl=ja',
+          accessibilityLabel: 'Googleのプライバシーポリシーをブラウザで開く',
+          accessibilityHint: '外部ブラウザで開きます',
+          icon: 'open-outline',
+        },
+        {
+          label: 'Appleのプライバシーポリシー',
+          url: 'https://www.apple.com/legal/privacy/jp/',
+          accessibilityLabel: 'Appleのプライバシーポリシーをブラウザで開く',
+          accessibilityHint: '外部ブラウザで開きます',
+          icon: 'open-outline',
+        },
+      ],
     },
     {
       title: '10. ポリシーの変更',
@@ -122,11 +169,12 @@ const privacyPolicyDocument: LegalDocument = {
     {
       title: '11. 運営者・お問い合わせ',
       body: `運営者：Rion（個人開発）。本ポリシーに関するお問い合わせは、${supportContact} へご連絡ください。Google PlayやApp Storeなどの配布ページにも同じ連絡先を掲載します。`,
+      links: [supportContactLink],
     },
   ],
 };
 
-const termsSections = [
+const termsSections: LegalSection[] = [
   {
     title: '1. はじめに',
     body: '「ふわっと。」は、忘れたくないことを気軽に残すための個人開発アプリです。本アプリを利用することで、この利用規約に同意したものとします。利用状況の分析への同意は別途選択でき、本規約への同意だけで分析を開始することはありません。',
@@ -170,12 +218,13 @@ const termsSections = [
   {
     title: '11. お問い合わせ',
     body: `運営者：Rion（個人開発）。本規約に関するお問い合わせは、${supportContact}へご連絡ください。Google PlayやApp Storeなどの配布ページにも同じ連絡先を掲載します。`,
+    links: [supportContactLink],
   },
 ];
 
 const termsDocument: LegalDocument = {
   title: '利用規約',
-  updatedAt: '2026年11月17日',
+  updatedAt: '2026年11月28日',
   sections: termsSections,
 };
 
@@ -1088,6 +1137,18 @@ function LegalDocumentModal({ document, onClose }: LegalDocumentModalProps) {
   const safeAreaInsets =
     useContext(SafeAreaInsetsContext ?? FALLBACK_SAFE_AREA_INSETS_CONTEXT) ?? ZERO_INSETS;
 
+  const handleOpenLegalLink = useCallback(async (link: LegalLink) => {
+    try {
+      await Linking.openURL(link.url);
+    } catch (error) {
+      console.warn('Failed to open legal link', error);
+      const fallbackMessage = link.url.startsWith('mailto:')
+        ? `メールアプリを開けませんでした。${supportContact} へご連絡ください。`
+        : `${link.url} をブラウザで開いてご確認ください。`;
+      Alert.alert('リンクを開けませんでした', fallbackMessage);
+    }
+  }, []);
+
   return (
     <Modal
       animationType="fade"
@@ -1113,7 +1174,11 @@ function LegalDocumentModal({ document, onClose }: LegalDocumentModalProps) {
         >
           <View className="flex-row items-center justify-between gap-[14px] border-b border-app-line pb-[12px]">
             <View className="min-w-0 flex-1">
-              <Text numberOfLines={2} className="text-[19px] font-bold leading-[26px] text-app-ink">
+              <Text
+                accessibilityRole="header"
+                numberOfLines={2}
+                className="text-[19px] font-bold leading-[26px] text-app-ink"
+              >
                 {document?.title}
               </Text>
               <Text
@@ -1139,12 +1204,35 @@ function LegalDocumentModal({ document, onClose }: LegalDocumentModalProps) {
           >
             {document?.sections.map((section) => (
               <View key={section.title} className="mt-[14px]">
-                <Text className="mb-[6px] text-[15px] font-bold leading-[22px] text-app-ink">
+                <Text
+                  accessibilityRole="header"
+                  className="mb-[6px] text-[15px] font-bold leading-[22px] text-app-ink"
+                >
                   {section.title}
                 </Text>
-                <Text className="text-[14px] font-normal leading-[22px] text-app-ink">
+                <Text selectable className="text-[14px] font-normal leading-[22px] text-app-ink">
                   {section.body}
                 </Text>
+                {section.links && section.links.length > 0 ? (
+                  <View className="mt-[10px] gap-[8px]">
+                    {section.links.map((link) => (
+                      <Pressable
+                        key={link.url}
+                        accessibilityRole="link"
+                        accessibilityLabel={link.accessibilityLabel}
+                        accessibilityHint={link.accessibilityHint}
+                        onPress={() => void handleOpenLegalLink(link)}
+                        className="min-h-[44px] flex-row items-center justify-between gap-[10px] rounded-[14px] border border-app-line bg-app-cloud px-[12px] py-[10px]"
+                        style={({ pressed }) => [pressed ? styles.timeValueButtonPressed : null]}
+                      >
+                        <Text className="min-w-0 flex-1 text-[14px] font-semibold leading-[20px] text-app-sky-deep underline">
+                          {link.label}
+                        </Text>
+                        <Ionicons name={link.icon} size={16} color={palette.skyDeep} />
+                      </Pressable>
+                    ))}
+                  </View>
+                ) : null}
               </View>
             ))}
           </ScrollView>

@@ -39,7 +39,7 @@ ADRは判断の理由を説明します。実装の詳細はコードや設計�
 
 ## 記録する流れ
 
-1. 相談が必要な判断は、[GitHub DiscussionsのADRカテゴリ](https://github.com/rion0918/pop-reminder/discussions/categories/adr)で背景と選択肢を検討する。Discussionは全ADRの必須手順ではなく、チャットやPRで決まった判断も記録できる。
+1. 相談が必要な判断は、[GitHub DiscussionsのADRカテゴリ](https://github.com/rion0918/fuwatto/discussions/categories/adr)で背景と選択肢を検討する。Discussionは全ADRの必須手順ではなく、チャットやPRで決まった判断も記録できる。
 2. [テンプレート](template.md)を複製し、未使用の連番と英小文字・ハイフンの短い名前で保存する。見出しは `Status / Context / Decision / Consequences`、本文は日本語、Dateは作成日とする。
 3. Proposedとして、背景、採用したい案と理由、実際に検討した他案と見送り理由、利点と受け入れる欠点を書く。コードから分かる事実と理由の推測を区別し、未確認の検討経緯は補わない。
 4. PRに関連ADRと、利用したDiscussionへのリンクを記載する。Discussionを利用した場合は、そちらからもADR・PRへリンクする。エージェントによる投稿は個別の指示を受けて行う。

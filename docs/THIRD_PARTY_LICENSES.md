@@ -35,5 +35,9 @@ license notices are kept with the dependency at build time.
 - Source: <https://github.com/jamsch/expo-speech-recognition>
 - License: MIT
 
-Android uses this package only with `requiresOnDeviceRecognition: true`; no network speech
-recognition endpoint is used.
+iOS and Android (API 28+) use this package with `requiresOnDeviceRecognition: false` by default
+(hybrid OS speech recognition), so audio may be processed by Apple or Google speech recognition
+services while online and by OS on-device recognition when available offline. On Android 13+ (API
+33+), the app may also trigger OS offline Japanese model downloads. When OS recognition is
+unavailable on Android, voice input falls back to the bundled Moonshine Tiny JA model via
+`react-native-sherpa-onnx`. Audio recordings are not persisted (`recordingOptions: { persist: false }`).
