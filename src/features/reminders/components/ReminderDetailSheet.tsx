@@ -311,7 +311,6 @@ export function ReminderDetailSheet({
           isDeleteRequestedRef.current = false;
           setIsDeleting(false);
         });
-      return;
     }
 
     if (pendingReminderId && pendingReminderId !== closedReminderId) {
