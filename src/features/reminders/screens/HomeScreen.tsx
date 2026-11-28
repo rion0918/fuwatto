@@ -910,6 +910,24 @@ export function HomeScreen() {
     [analytics, updateReminderSchedule],
   );
 
+  const handleOpenScheduleProPaywall = useCallback(async () => {
+    analytics.captureProPaywallRequested({ placement: 'active_limit' });
+    const result = await purchases.presentProPaywallIfNeeded();
+    analytics.captureProPaywallResult({ placement: 'active_limit', outcome: result });
+
+    if (result === 'cancelled') return false;
+    if (result === 'error') {
+      Alert.alert(
+        'Proを確認できませんでした',
+        '通信状況を確認して、時間をおいてもう一度お試しください。',
+      );
+      return false;
+    }
+
+    const accessState = await purchases.getProAccessState();
+    return result === 'purchased' || result === 'restored' || accessState !== 'free';
+  }, [analytics, purchases]);
+
   const handleSkipRaiseToSpeakOnboarding = useCallback(async () => {
     if (isRaiseToSpeakSetupBusy) return;
 
@@ -1323,11 +1341,14 @@ export function HomeScreen() {
 
       <ReminderDetailSheet
         reminder={selectedReminder}
+        previousNotifyTime={settings?.previousNotifyTime}
         allDayNotifyTime={settings?.allDayNotifyTime}
+        timePresets={quickAddPresets}
         onClose={handleCloseReminderDetail}
         onDelete={handleDeleteReminder}
         onUpdateTitle={handleUpdateReminderTitle}
         onUpdateSchedule={handleUpdateReminderSchedule}
+        onOpenProPaywall={handleOpenScheduleProPaywall}
       />
 
       {isSelectionMode ? (

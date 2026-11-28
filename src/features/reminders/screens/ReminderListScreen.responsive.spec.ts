@@ -91,3 +91,11 @@ test('reminder list selection transitions and bulk-delete outcomes are observabl
   assert.equal(failure.ok, false);
   if (!failure.ok) assert.deepEqual(failure.remainingSelectedIds, new Set(['first', 'second']));
 });
+
+test('reminder list forwards settings and schedule paywall handler to the detail sheet', () => {
+  assertSourceIncludes(source, [
+    /const \{ settings, refresh: refreshSettings \} = useAppSettings\(\);/,
+    /void refreshSettings\(\);/,
+    /<ReminderDetailSheet[\s\S]*previousNotifyTime=\{settings\?\.previousNotifyTime\}[\s\S]*allDayNotifyTime=\{settings\?\.allDayNotifyTime\}[\s\S]*timePresets=\{timePresets\}[\s\S]*onOpenProPaywall=\{handleOpenScheduleProPaywall\}/,
+  ]);
+});

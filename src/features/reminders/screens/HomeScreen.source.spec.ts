@@ -363,3 +363,9 @@ test('home rejects duplicate deletion requests before starting any work', () => 
     /async \(reminder: Reminder\) => \{\s*if \(isReminderDeletionInProgressRef\.current\) return;/,
   ]);
 });
+
+test('home forwards settings and schedule paywall handler to the detail sheet', () => {
+  assertSourceIncludes(source, [
+    /<ReminderDetailSheet[\s\S]*previousNotifyTime=\{settings\?\.previousNotifyTime\}[\s\S]*allDayNotifyTime=\{settings\?\.allDayNotifyTime\}[\s\S]*timePresets=\{quickAddPresets\}[\s\S]*onOpenProPaywall=\{handleOpenScheduleProPaywall\}/,
+  ]);
+});

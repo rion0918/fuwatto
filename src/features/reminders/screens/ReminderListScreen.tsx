@@ -15,6 +15,7 @@ import {
 
 import { useAppServices } from '../../../bootstrap/appServicesContext';
 import { AppScreen } from '../../../shared/components/AppScreen';
+import { DEFAULT_TIME_PRESETS } from '../../../shared/utils/timePresets';
 import { palette } from '../../../constants/colors';
 import { useAppSettingsQuery as useAppSettings } from '../../settings/presentation/useAppSettingsQuery';
 import { ReminderDetailSheet } from '../components/ReminderDetailSheet';
@@ -46,7 +47,8 @@ export function ReminderListScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ query?: string; filter?: string }>();
   const analytics = useAppServices().analytics;
-  const { settings } = useAppSettings();
+  const purchases = useAppServices().purchases;
+  const { settings, refresh: refreshSettings } = useAppSettings();
   const {
     reminders,
     loading,
@@ -81,11 +83,29 @@ export function ReminderListScreen() {
   const hasPastReminders = displayedReminders.some((reminder) => isReminderExpired(reminder));
   const allRemindersSelected =
     displayedReminders.length > 0 && selectedCount === displayedReminders.length;
+  const timePresets = useMemo(
+    () =>
+      settings
+        ? [
+            { label: '朝', time: settings.defaultTargetTime },
+            { label: '昼', time: settings.noonTargetTime },
+            { label: '夕', time: settings.eveningTargetTime },
+            { label: '夜', time: settings.nightTargetTime },
+          ]
+        : DEFAULT_TIME_PRESETS,
+    [settings],
+  );
 
   useFocusEffect(
     useCallback(() => {
       void refresh();
     }, [refresh]),
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      void refreshSettings();
+    }, [refreshSettings]),
   );
 
   useEffect(() => {
@@ -255,6 +275,24 @@ export function ReminderListScreen() {
     },
     [analytics, updateReminderSchedule],
   );
+
+  const handleOpenScheduleProPaywall = useCallback(async () => {
+    analytics.captureProPaywallRequested({ placement: 'active_limit' });
+    const result = await purchases.presentProPaywallIfNeeded();
+    analytics.captureProPaywallResult({ placement: 'active_limit', outcome: result });
+
+    if (result === 'cancelled') return false;
+    if (result === 'error') {
+      Alert.alert(
+        'Proを確認できませんでした',
+        '通信状況を確認して、時間をおいてもう一度お試しください。',
+      );
+      return false;
+    }
+
+    const accessState = await purchases.getProAccessState();
+    return result === 'purchased' || result === 'restored' || accessState !== 'free';
+  }, [analytics, purchases]);
 
   return (
     <AppScreen theme={settings?.theme ?? 'lavender'}>
@@ -479,13 +517,16 @@ export function ReminderListScreen() {
 
       <ReminderDetailSheet
         reminder={selectedReminder}
+        previousNotifyTime={settings?.previousNotifyTime}
         allDayNotifyTime={settings?.allDayNotifyTime}
+        timePresets={timePresets}
         onClose={(closedReminderId) =>
           setSelectedReminderId((current) => (current === closedReminderId ? null : current))
         }
         onDelete={handleDeleteReminder}
         onUpdateTitle={handleUpdateReminderTitle}
         onUpdateSchedule={handleUpdateReminderSchedule}
+        onOpenProPaywall={handleOpenScheduleProPaywall}
       />
     </AppScreen>
   );

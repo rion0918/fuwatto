@@ -14,6 +14,7 @@ import { BottomSheetBackdrop, BottomSheetModal, BottomSheetScrollView } from '@g
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { palette } from '../../../constants/colors';
+import type { TimePreset } from '../../../shared/utils/timePresets';
 import type {
   UpdateReminderScheduleInput,
   UpdateReminderScheduleResult,
@@ -24,7 +25,10 @@ import {
   ImeSafeReminderTitleInput,
   type ImeSafeReminderTitleInputHandle,
 } from './ImeSafeReminderTitleInput';
-import { ReminderScheduleEditorModal } from './ReminderScheduleEditorModal';
+import {
+  ReminderScheduleEditorModal,
+  type ReminderScheduleSaveError,
+} from './ReminderScheduleEditorModal';
 import {
   formatReminderDetailAccessibilityDateTime,
   formatReminderDetailDate,
@@ -34,7 +38,9 @@ import {
 
 type ReminderDetailSheetProps = {
   reminder: Reminder | null;
+  previousNotifyTime?: string;
   allDayNotifyTime?: string;
+  timePresets?: TimePreset[];
   onClose: (closedReminderId: string | null) => void;
   onDelete: (reminder: Reminder) => Promise<void>;
   onUpdateTitle: (reminder: Reminder, title: string) => Promise<Reminder>;
@@ -42,7 +48,27 @@ type ReminderDetailSheetProps = {
     reminder: Reminder,
     input: UpdateReminderScheduleInput,
   ) => Promise<UpdateReminderScheduleResult>;
+  onOpenProPaywall?: () => Promise<boolean>;
 };
+
+function mapScheduleSaveError(error: unknown): ReminderScheduleSaveError {
+  if (error instanceof Error && error.name === 'ActiveReminderLimitReachedError') {
+    return {
+      message: '無料版で保持できる予定の上限に達しています',
+      isActiveLimitReached: true,
+    };
+  }
+
+  if (error instanceof Error && error.message === 'Reminder target time must be in the future') {
+    return {
+      message: '過去の日時には変更できません。未来の日時を選び直してください',
+    };
+  }
+
+  return {
+    message: '日時を保存できませんでした',
+  };
+}
 
 const DETAIL_SHEET_BOTTOM_CLEARANCE = 24;
 const DETAIL_SHEET_MIN_DYNAMIC_CONTENT_SIZE = 320;
@@ -148,11 +174,14 @@ function NotificationTimeline({
 
 export function ReminderDetailSheet({
   reminder,
+  previousNotifyTime,
   allDayNotifyTime = '09:00',
+  timePresets,
   onClose,
   onDelete,
   onUpdateTitle,
   onUpdateSchedule,
+  onOpenProPaywall,
 }: ReminderDetailSheetProps) {
   const safeAreaInsets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
@@ -176,7 +205,11 @@ export function ReminderDetailSheet({
   const [titleNotice, setTitleNotice] = useState<string | null>(null);
   const [isScheduleEditorOpen, setIsScheduleEditorOpen] = useState(false);
   const [isScheduleSaving, setIsScheduleSaving] = useState(false);
+  const [isOpeningProPaywall, setIsOpeningProPaywall] = useState(false);
   const [scheduleNotice, setScheduleNotice] = useState<string | null>(null);
+  const [scheduleEditorError, setScheduleEditorError] = useState<ReminderScheduleSaveError | null>(
+    null,
+  );
   const sheetTopInset = safeAreaInsets.top + 8;
   const detailMaxDynamicContentSize = useMemo(
     () =>
@@ -206,7 +239,9 @@ export function ReminderDetailSheet({
     scheduleEditSessionRef.current += 1;
     setIsScheduleEditorOpen(false);
     setIsScheduleSaving(false);
+    setIsOpeningProPaywall(false);
     setScheduleNotice(null);
+    setScheduleEditorError(null);
   }, []);
 
   const renderBackdrop = useCallback(
@@ -304,7 +339,13 @@ export function ReminderDetailSheet({
   );
 
   const handleTitlePress = useCallback(() => {
-    if (!reminder || isTitleSaving || isScheduleSaving || isScheduleEditorOpen) {
+    if (
+      !reminder ||
+      isTitleSaving ||
+      isScheduleSaving ||
+      isOpeningProPaywall ||
+      isScheduleEditorOpen
+    ) {
       return;
     }
 
@@ -318,7 +359,7 @@ export function ReminderDetailSheet({
     requestAnimationFrame(() => {
       titleInputRef.current?.focus();
     });
-  }, [isScheduleEditorOpen, isScheduleSaving, isTitleSaving, reminder]);
+  }, [isOpeningProPaywall, isScheduleEditorOpen, isScheduleSaving, isTitleSaving, reminder]);
 
   const handleTitleTextChange = useCallback((text: string) => {
     draftTitleRef.current = text;
@@ -376,23 +417,38 @@ export function ReminderDetailSheet({
   );
 
   const handleSchedulePress = useCallback(() => {
-    if (!reminder || isTitleEditing || isTitleSaving || isScheduleSaving) {
+    if (!reminder || isTitleEditing || isTitleSaving || isScheduleSaving || isOpeningProPaywall) {
       return;
     }
 
     setScheduleNotice(null);
+    setScheduleEditorError(null);
     setIsScheduleEditorOpen(true);
-  }, [isScheduleSaving, isTitleEditing, isTitleSaving, reminder]);
+  }, [isOpeningProPaywall, isScheduleSaving, isTitleEditing, isTitleSaving, reminder]);
+
+  const handleCloseScheduleEditor = useCallback(() => {
+    if (isScheduleSaving || isOpeningProPaywall) {
+      return;
+    }
+
+    setIsScheduleEditorOpen(false);
+    setScheduleEditorError(null);
+  }, [isOpeningProPaywall, isScheduleSaving]);
+
+  const handleClearScheduleEditorError = useCallback(() => {
+    setScheduleEditorError(null);
+  }, []);
 
   const handleScheduleConfirm = useCallback(
     async (input: UpdateReminderScheduleInput) => {
-      if (!reminder || isScheduleSaving) {
+      if (!reminder || isScheduleSaving || isOpeningProPaywall) {
         return;
       }
 
       const editSession = scheduleEditSessionRef.current + 1;
       scheduleEditSessionRef.current = editSession;
       setScheduleNotice(null);
+      setScheduleEditorError(null);
       setIsScheduleSaving(true);
 
       try {
@@ -402,6 +458,7 @@ export function ReminderDetailSheet({
         }
 
         setIsScheduleEditorOpen(false);
+        setScheduleEditorError(null);
         if (
           result.notification.status === 'not-scheduled' &&
           !(input.allDay && result.notification.reason === 'target-time-passed')
@@ -418,22 +475,58 @@ export function ReminderDetailSheet({
         }
 
         console.warn('Failed to update reminder schedule', error);
-        setScheduleNotice(
-          error instanceof Error && error.name === 'ActiveReminderLimitReachedError'
-            ? '無料版で保持できる予定の上限に達しています'
-            : '日時を保存できませんでした',
-        );
+        setScheduleEditorError(mapScheduleSaveError(error));
       } finally {
         if (editSession === scheduleEditSessionRef.current) {
           setIsScheduleSaving(false);
         }
       }
     },
-    [isScheduleSaving, onUpdateSchedule, reminder],
+    [isOpeningProPaywall, isScheduleSaving, onUpdateSchedule, reminder],
   );
 
+  const handleOpenScheduleProPaywall = useCallback(async () => {
+    if (!onOpenProPaywall || isScheduleSaving || isOpeningProPaywall) {
+      return;
+    }
+
+    const editSession = scheduleEditSessionRef.current;
+    setIsOpeningProPaywall(true);
+
+    try {
+      const unlocked = await onOpenProPaywall();
+      if (editSession !== scheduleEditSessionRef.current) {
+        return;
+      }
+
+      if (unlocked) {
+        setScheduleEditorError(null);
+      }
+    } catch (error) {
+      if (editSession !== scheduleEditSessionRef.current) {
+        return;
+      }
+
+      console.warn('Failed to open Pro paywall from schedule editor', error);
+      setScheduleEditorError({
+        message: 'Proを確認できませんでした。時間をおいてもう一度お試しください',
+        isActiveLimitReached: true,
+      });
+    } finally {
+      if (editSession === scheduleEditSessionRef.current) {
+        setIsOpeningProPaywall(false);
+      }
+    }
+  }, [isOpeningProPaywall, isScheduleSaving, onOpenProPaywall]);
+
   const handleDeletePress = useCallback(() => {
-    if (!reminder || isDeleting || isScheduleSaving || isDeleteRequestedRef.current) {
+    if (
+      !reminder ||
+      isDeleting ||
+      isScheduleSaving ||
+      isOpeningProPaywall ||
+      isDeleteRequestedRef.current
+    ) {
       return;
     }
 
@@ -445,7 +538,14 @@ export function ReminderDetailSheet({
     closingReminderIdRef.current = displayedReminderIdRef.current;
     isClosingRef.current = true;
     sheetRef.current?.dismiss();
-  }, [discardScheduleEdit, discardTitleEdit, isDeleting, isScheduleSaving, reminder]);
+  }, [
+    discardScheduleEdit,
+    discardTitleEdit,
+    isDeleting,
+    isOpeningProPaywall,
+    isScheduleSaving,
+    reminder,
+  ]);
 
   return (
     <>
@@ -486,9 +586,9 @@ export function ReminderDetailSheet({
                   accessibilityRole="button"
                   accessibilityLabel="タイトルを編集"
                   accessibilityState={{
-                    disabled: !reminder || isTitleSaving || isScheduleSaving,
+                    disabled: !reminder || isTitleSaving || isScheduleSaving || isOpeningProPaywall,
                   }}
-                  disabled={!reminder || isTitleSaving || isScheduleSaving}
+                  disabled={!reminder || isTitleSaving || isScheduleSaving || isOpeningProPaywall}
                   onPress={handleTitlePress}
                   style={({ pressed }) => [
                     styles.titlePressable,
@@ -514,7 +614,11 @@ export function ReminderDetailSheet({
             <NotificationTimeline
               reminder={reminder}
               isScheduleEditingDisabled={
-                isTitleEditing || isTitleSaving || isScheduleSaving || isDeleting
+                isTitleEditing ||
+                isTitleSaving ||
+                isScheduleSaving ||
+                isOpeningProPaywall ||
+                isDeleting
               }
               onEditSchedule={handleSchedulePress}
             />
@@ -526,13 +630,17 @@ export function ReminderDetailSheet({
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="このシャボン玉を削除する"
-              accessibilityState={{ disabled: !reminder || isDeleting || isScheduleSaving }}
+              accessibilityState={{
+                disabled: !reminder || isDeleting || isScheduleSaving || isOpeningProPaywall,
+              }}
               onPress={handleDeletePress}
-              disabled={!reminder || isDeleting || isScheduleSaving}
+              disabled={!reminder || isDeleting || isScheduleSaving || isOpeningProPaywall}
               style={({ pressed }) => [
                 styles.deleteAction,
                 pressed && !isDeleting ? styles.deleteActionPressed : null,
-                !reminder || isDeleting || isScheduleSaving ? styles.deleteActionDisabled : null,
+                !reminder || isDeleting || isScheduleSaving || isOpeningProPaywall
+                  ? styles.deleteActionDisabled
+                  : null,
               ]}
             >
               <View style={styles.deleteActionContent}>
@@ -548,10 +656,18 @@ export function ReminderDetailSheet({
         <ReminderScheduleEditorModal
           visible={isScheduleEditorOpen}
           reminder={reminder}
+          previousNotifyTime={previousNotifyTime}
           allDayNotifyTime={allDayNotifyTime}
+          timePresets={timePresets}
           isSaving={isScheduleSaving}
+          saveError={scheduleEditorError}
+          isOpeningProPaywall={isOpeningProPaywall}
           onConfirm={handleScheduleConfirm}
-          onClose={() => setIsScheduleEditorOpen(false)}
+          onClose={handleCloseScheduleEditor}
+          onClearSaveError={handleClearScheduleEditorError}
+          onOpenProPaywall={
+            onOpenProPaywall ? () => void handleOpenScheduleProPaywall() : undefined
+          }
         />
       ) : null}
     </>
